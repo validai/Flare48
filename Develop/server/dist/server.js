@@ -37,15 +37,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const dotenv = __importStar(require("dotenv")); // ✅ Correct way to import dotenv
+const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 5000; // Render assigns PORT dynamically
+const PORT = parseInt(process.env.PORT || "5000", 10); // ✅ Fix port type
 app.use(express_1.default.json());
-app.get('/', (req, res) => {
-    res.send('Flare48 API is running...');
+app.get("/", (req, res) => {
+    res.send("Flare48 API is running...");
 });
-// Explicitly listen on 0.0.0.0 to accept external traffic
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Server running on http://0.0.0.0:${PORT}`);
 });
