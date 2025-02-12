@@ -8,24 +8,24 @@ const PORT = parseInt(process.env.PORT || "5000", 10); // Ensure PORT is a numbe
 
 app.use(express.json());
 
-// Log environment variables for debugging
-console.log("🛠️ ENVIRONMENT VARIABLES:");
-console.log("➡️ PORT:", PORT);
-console.log("➡️ NODE_ENV:", process.env.NODE_ENV);
+// Debug log to confirm the server is starting
+console.log("🛠️ Starting Flare48 API...");
+console.log(`🔍 Environment PORT: ${process.env.PORT}`);
+console.log(`🔍 Resolved PORT: ${PORT}`);
 
-// Debug API Route
+// API Route to confirm it's live
 app.get("/", (req: express.Request, res: express.Response) => {
   res.send("✅ Flare48 API is running successfully!");
   console.log("✅ Request received at /");
 });
 
-// Force Keep-Alive Log to Prevent Render from Auto-Closing
+// Force Keep-Alive Log to Prevent Render Shutdown
 setInterval(() => {
   console.log("💡 Keep-alive ping - Server is still running...");
-}, 10000); // Log every 10 seconds to prevent shutdown
+}, 10000);
 
 // Start Server
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port: ${PORT}`);
-  console.log(`🌍 Accessible at: http://0.0.0.0:${PORT}/`);
+  console.log(`🚀 Server is officially running on: http://0.0.0.0:${PORT}/`);
+  console.log(`📡 Send a request to test: curl https://your-app-name.onrender.com/`);
 });
