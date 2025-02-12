@@ -4,6 +4,7 @@
     "description": "Backend for Flare48",
     "main": "dist/server.js",
     "scripts": {
+      "build": "tsc",
       "start": "node dist/server.js",
       "dev": "nodemon src/server.ts"
     },
