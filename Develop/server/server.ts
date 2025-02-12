@@ -1,7 +1,7 @@
 import express from 'express';
-import dotenv from 'dotenv';
-
+import * as dotenv from 'dotenv'; // ✅ Correct way to import dotenv
 dotenv.config();
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;  // Render assigns PORT dynamically
