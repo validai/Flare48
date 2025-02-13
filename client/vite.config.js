@@ -11,7 +11,7 @@ export default defineConfig({
     port: 5173, // Development port for Vite (Frontend)
     proxy: {
       '/api': {
-        target: 'http://localhost:3000', // Backend API now runs on port 3000
+        target: process.env.REACT_APP_API_URL || "http://localhost:3000",
         changeOrigin: true,
         secure: false,
       },

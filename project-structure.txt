@@ -887,9 +887,9 @@
 │   │   └── vary
 │   ├── package-lock.json
 │   ├── package.json
+│   ├── project-structure.txt
 │   ├── routes
 │   │   └── index.js
-│   ├── server.js
 │   ├── services
 │   │   └── newsAPI.js
 │   ├── src
