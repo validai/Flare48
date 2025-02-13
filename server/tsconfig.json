@@ -2,13 +2,13 @@
   "compilerOptions": {
     "target": "ES6",
     "module": "CommonJS",
-    "outDir": "./dist",   // Correct location for compiled JS files
-    "rootDir": "./src",   // Ensures TS files are compiled properly
+    "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true
   },
-  "include": ["src"],   // Only compile "src" directory
+  "include": ["src"],
   "exclude": ["node_modules"]
 }
