@@ -2,8 +2,9 @@ services:
   - type: web
     name: client
     env: static
-    buildCommand: yarn build
+    buildCommand: yarn install && yarn build
     staticPublishPath: dist
     envVars:
       - key: NODE_ENV
         value: production
+    runtime: node 18
