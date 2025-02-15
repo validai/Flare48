@@ -8,3 +8,12 @@ services:
       - key: NODE_ENV
         value: production
     runtime: node 18
+  - type: web
+    name: server
+    env: node
+    buildCommand: yarn cache clean && yarn install && yarn build
+    startCommand: yarn start
+    envVars:
+      - key: NODE_ENV
+        value: production
+    runtime: node 18

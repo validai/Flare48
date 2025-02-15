@@ -7,7 +7,7 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "build": "tsc",
+    "build": "echo 'No build step required'",
     "start": "node server/dist/server.js",
     "dev": "nodemon src/server.ts"
   },
@@ -16,10 +16,6 @@
     "express": "^4.18.2"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^5.0.0",
-    "@types/node": "^22.13.1",
-    "nodemon": "^3.1.9",
-    "typescript": "^5.7.3"
+    "nodemon": "^3.1.9"
   }
 }
