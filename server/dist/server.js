@@ -12,8 +12,13 @@ app.use(express.json());
 app.get('/', (_req, res) => {
     res.send('Flare48 Server is Running!');
 });
+// API root route
+app.get('/api', (_req, res) => {
+    res.json({ message: "API root is working!" });
+});
+// Test API route
 app.get('/api/test', (_req, res) => {
-    res.json({ message: 'API is working!' });
+    res.json({ message: "API is working!" });
 });
 // Start the server
 app.listen(PORT, () => {
