@@ -1,9 +1,9 @@
 services:
   - type: web
     name: client
-    env: static
+    env: node
     buildCommand: yarn cache clean && yarn install && yarn build
-    staticPublishPath: dist
+    startCommand: yarn preview
     envVars:
       - key: NODE_ENV
         value: production
