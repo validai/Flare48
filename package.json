@@ -1,6 +1,8 @@
 {
   "name": "flare48-server",
   "version": "1.0.0",
+  "private": true,
+  "workspaces": ["client", "server"],
   "description": "Flare48 Web Service",
   "type": "module",
   "main": "dist/server.js",
@@ -19,8 +21,5 @@
     "@types/node": "^22.13.1",
     "nodemon": "^3.1.9",
     "typescript": "^5.7.3"
-  },
-  "engines": {
-    "node": "18.x"
   }
 }
