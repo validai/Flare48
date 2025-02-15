@@ -1,24 +1,16 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Load environment variables
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3000';
-
 export default defineConfig({
   plugins: [react()],
-  root: '.',
-  build: {
-    outDir: 'dist',
-  },
   server: {
-    port: 5173, // Development port for Vite (Frontend)
-    open: true, // Opens browser automatically
+    port: 5173,
+    open: true,
     proxy: {
       '/api': {
-        target: API_URL,
+        target: 'http://localhost:3000', // Backend URL
         changeOrigin: true,
-        secure: false,
-        rewrite: (path) => path.replace(/^\/api/, ''), // Removes '/api' prefix
+        rewrite: (path) => path.replace(/^\/api/, ''), // Remove `/api` prefix
       },
     },
   },

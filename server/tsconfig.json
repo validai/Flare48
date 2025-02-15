@@ -11,6 +11,18 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "allowJs": true,
+    "moduleDetection": "force",
+    "allowSyntheticDefaultImports": true,
+    "resolvePackageJsonExports": true,
+    "resolvePackageJsonImports": true,
+    "useDefineForClassFields": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "alwaysStrict": true,
+    "useUnknownInCatchVariables": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

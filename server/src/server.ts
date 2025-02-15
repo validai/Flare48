@@ -1,4 +1,5 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 
@@ -14,10 +15,20 @@ app.use(express.json());
 
 // Basic route
 app.get('/', (_req: Request, res: Response) => {
-  res.send('Flare48 Server is Running!');
+    res.send('Flare48 Server is Running!');
+});
+
+// API root route
+app.get('/api', (_req: Request, res: Response) => {
+    res.json({ message: "API root is working!" });
+});
+
+// Test API route
+app.get('/api/test', (_req: Request, res: Response) => {
+    res.json({ message: "API is working!" });
 });
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
