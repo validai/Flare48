@@ -2,7 +2,7 @@ services:
   - type: web
     name: client
     env: static
-    buildCommand: yarn install && yarn build
+    buildCommand: yarn cache clean && yarn install && yarn build
     staticPublishPath: dist
     envVars:
       - key: NODE_ENV
