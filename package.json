@@ -2,7 +2,10 @@
   "name": "flare48-server",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["client", "server"],
+  "workspaces": [
+    "client",
+    "server"
+  ],
   "description": "Flare48 Web Service",
   "type": "module",
   "main": "dist/server.js",
