@@ -9,13 +9,14 @@ services:
         value: production
     runtime: node 18
     rootDir: ./client # Specify the root directory for the client
-  - type: web
-    name: server
-    env: node
-    buildCommand: yarn cache clean && yarn install && yarn build
-    startCommand: yarn start
-    envVars:
-      - key: NODE_ENV
-        value: production
-    runtime: node 18
-    rootDir: ./server # Specify the root directory for the server
+  # Remove or comment out the server service if not needed for deployment
+  # - type: web
+  #   name: server
+  #   env: node
+  #   buildCommand: yarn cache clean && yarn install && yarn build
+  #   startCommand: yarn start
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #   runtime: node 18
+  #   rootDir: ./server # Specify the root directory for the server
