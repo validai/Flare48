@@ -9,5 +9,8 @@ export default defineConfig({
     proxy: {
       "/api": "http://localhost:5000", // Use only for local development
     }
+  },
+  preview: {
+    allowedHosts: ['flare48-2sfl.onrender.com', 'localhost'], // Allow Render host and local dev
   }
 })
