@@ -11,9 +11,12 @@
     "postbuild": "mv build dist"
   },
   "dependencies": {
+    "@relume_io/relume-ui": "^1.3.0",
     "@tailwindcss/vite": "^4.0.6",
+    "framer-motion": "^7.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-icons": "^4.3.1",
     "react-router-dom": "^6.29.0",
     "tailwindcss": "^4.0.6"
   },
