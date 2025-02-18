@@ -1,7 +1,10 @@
 services:
-  - type: web
-    name: flare48-client
-    env: static
+
+  - name: flare48-client
+    type: static
     rootDir: client
-    buildCommand: npm run build
-    startCommand: npm run start
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://flare48-server.onrender.com 
