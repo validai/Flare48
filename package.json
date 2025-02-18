@@ -8,10 +8,10 @@
   ],
   "description": "Flare48 Web Service",
   "type": "module",
-  "main": "dist/server.js",
+  "main": "server/dist/server.js",
   "scripts": {
     "build": "cd client && npm run build",
-    "start": "cd client && npm start",
+    "start": "cd client && npm run preview",
     "dev": "cd client && npm run dev"
   },
   "dependencies": {
