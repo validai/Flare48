@@ -1,11 +1,7 @@
 services:
   - type: web
-    name: client
-    env: node
-    rootDirectory: client
-    buildCommand: ./render-build.sh
-    startCommand: npm start
-    envVars:
-      - key: NODE_ENV
-        value: production
-    runtime: node 18
+    name: flare48-client
+    env: static
+    staticPublishPath: client/build
+    buildCommand: npm install && npm run build --prefix client
+    startCommand: npm start --prefix client

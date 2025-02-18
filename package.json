@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "start": "npm --prefix client start",
-    "build": "echo 'Build script not defined yet'"
+    "build": "npm --prefix client run build"
   }
 }
