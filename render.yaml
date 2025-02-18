@@ -4,5 +4,5 @@ services:
     env: static
     rootDir: client
     staticPublishPath: build
-    buildCommand: npm install --legacy-peer-deps && npm run build
+    buildCommand: npm install && npm run build
     startCommand: npm start
