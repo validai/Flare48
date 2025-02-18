@@ -2,6 +2,7 @@ services:
   - type: web
     name: flare48-client
     env: static
-    staticPublishPath: client/build
-    buildCommand: npm install && npm run build --prefix client
-    startCommand: npm start --prefix client
+    rootDir: client
+    staticPublishPath: build
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm start
