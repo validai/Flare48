@@ -8,7 +8,7 @@
   ],
   "description": "Flare48 Web Service",
   "type": "module",
-  "main": "server/dist/server.js",
+  "main": "client/dist/index.html",
   "scripts": {
     "build": "cd client && npm run build",
     "start": "cd client && npm run preview",
