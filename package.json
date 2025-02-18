@@ -10,9 +10,9 @@
   "type": "module",
   "main": "dist/server.js",
   "scripts": {
-    "build": "echo 'No build step required'",
-    "start": "node server/dist/server.js",
-    "dev": "nodemon src/server.ts"
+    "build": "cd client && npm run build",
+    "start": "cd client && npm start",
+    "dev": "cd client && npm run dev"
   },
   "dependencies": {
     "cors": "^2.8.5",
