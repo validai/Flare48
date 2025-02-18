@@ -4,7 +4,7 @@ import cors from 'cors';
 // Load environment variables
 dotenv.config();
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001; // Change the port to avoid conflict
 // Middleware
 app.use(cors());
 app.use(express.json());
