@@ -4,16 +4,6 @@ services:
     env: node
     rootDirectory: client
     buildCommand: npm install && npm run build
-    startCommand: npm run preview
-    envVars:
-      - key: NODE_ENV
-        value: production
-    runtime: node 18
-  - type: web
-    name: server
-    env: node
-    rootDirectory: server
-    buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
