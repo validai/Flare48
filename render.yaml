@@ -2,6 +2,7 @@ services:
   - type: web
     name: client
     env: node
+    rootDirectory: client
     buildCommand: npm install && npm run build
     startCommand: npm run preview
     envVars:
@@ -11,6 +12,7 @@ services:
   - type: web
     name: server
     env: node
+    rootDirectory: server
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
