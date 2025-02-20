@@ -6,8 +6,8 @@
   "main": "server.js",
   "scripts": {
     "build": "echo 'No build step required for JavaScript'",
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.ts"
+    "start": "node server.js",
+    "dev": "nodemon server.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

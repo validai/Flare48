@@ -1,6 +1,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import apiRoutes from './routes/api.js';
 
 // Load environment variables
 dotenv.config();
