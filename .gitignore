@@ -2,4 +2,6 @@
 node_modules/
 dist/
 .env
+client/.env
+server/.env
 project-structure.txt
