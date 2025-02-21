@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import * as dotenv from 'dotenv'
+
 import tailwindcss from '@tailwindcss/vite'
-dotenv.config();
 
 
 // https://vite.dev/config/
@@ -15,6 +14,6 @@ export default defineConfig({
     }
   },
   preview: {
-    allowedHosts: ['flare48-2sfl.onrender.com', 'localhost'], // Allow Render host and local dev
+    allowedHosts: ['flare48.onrender.com', 'localhost'], // Add your Render domain here
   }
 })
