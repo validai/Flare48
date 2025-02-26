@@ -12,7 +12,7 @@ const SearchBox = () => {
   };
 
   return (
-    <div>
+    <div className="flex content-center justify-center mt-20 border border-gray-500">
       <form onSubmit={handleSubmit}>
         <input
           type="text"
