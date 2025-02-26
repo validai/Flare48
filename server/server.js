@@ -1,9 +1,10 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import apiRoutes from './routes/api.js';
+import mongoose from 'mongoose';
+import apiRoutes from './routes/api.js' ;
 
-// Load environment variables
+// Load environment variables 
 dotenv.config();
 
 const app = express();
@@ -12,6 +13,17 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+if (!process.env.MONGO_URI) {
+    console.error("Error: MONGO_URI is not defined in .env file");
+    process.exit(1);
+  }
+  
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+}).then(() => console.log("MongoDB connected"))
+.catch(err => console.error("MongoDB connection error:", err));
 
 // Basic route
 app.get('/', (_req, res) => {
