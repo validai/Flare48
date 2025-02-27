@@ -1,60 +1,42 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
 
 const Navbar = () => {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const navigate = useNavigate();
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isSignup, setIsSignup] = useState(false);
+    const navigate = useNavigate();
 
-  return (
-    <>
-      <nav className="sticky top-0 z-50 py-3 bg-white border-b border-neutral-700/80">
-        <div className="container px-4 mx-auto relative text-sm">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-              <img
-                className="h-10 w-10"
-                src="https://static-00.iconduck.com/assets.00/placeholder-icon-2048x2048-48kucnce.png"
-                alt="Flare48 Logo"
-              />
-              <span className="text-2xl tracking-tight">Flare48</span>
-            </div>
+    const toggleModal = (type) => {
+        setIsSignup(type === 'signup');
+        setIsModalOpen(!isModalOpen);
+    };
 
-            <div className="hidden md:flex flex-grow justify-center">
-              <div
-                className={`transition-all duration-300 w-1/2 ${isSearchOpen ? 'block' : 'hidden'}`}
-              >
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full p-2 bg-white border-2 border-black rounded-lg focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="md:hidden cursor-pointer text-xl text-neutral-900 hover:text-primary-500"
-            >
-              <Search />
-            </div>
-
-            <ul className="flex space-x-12">
-              <li className="text-neutral-900 hover:text-primary-500 hover:scale-105">
-                <button
-                  onClick={() => navigate('/saved-articles')}
-                  className="text-neutral-900 hover:text-primary-500 text-xl hover:scale-105"
-                >
-                  Saved Articles
-                </button>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </nav>
-    </>
-  );
+    return (
+        <>
+            <nav className="sticky top-0 z-50 py-3 backdrop-blur-lg border-b border-neutral-700/80">
+                <div className="container px-4 mx-auto relative text-sm">
+                    <div className="flex items-center justify-center">
+                        <div className="flex items-center mr-auto space-x-2" onClick={() => navigate('/')}>
+                            <img className="h-10 w-10 mr-2 " src='https://static-00.iconduck.com/assets.00/placeholder-icon-2048x2048-48kucnce.png' />
+                            <span className="text-2xl tracking-tight">Flare48</span>
+                        </div>
+                        <ul className='flex ml-14 text-xl space-x-12 '>
+                            <li>
+                                <button onClick={() => setIsSearchOpen(true)} className="text-neutral-900 hover:text-primary-500 hover:cursor-pointer hover:scale-120">
+                                    Search
+                                </button>
+                            </li>
+                            <li className="text-neutral-900 hover:text-primary-500 hover:scale-120">
+                                <a href="#" className="text-neutral-900 hover:text-primary-500 hover:scale-120">Saved Articles</a>
+                            </li>
+                            
+                        </ul>
+                    </div>
+                </div>
+            </nav>           
+        </>
+    );
 };
 
 export default Navbar;
