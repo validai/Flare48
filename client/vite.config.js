@@ -12,6 +12,6 @@ export default defineConfig({
     }
   },
   preview: {
-    allowedHosts: ['flare48.onrender.com', 'localhost'],
+    allowedHosts: ['flare48-6c1x.onrender.com', 'localhost'],
   }
 })
