@@ -12,11 +12,10 @@ const Navbar = () => {
         <div className="container px-4 mx-auto relative text-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-              <img
-                className="h-10 w-10"
-                src="https://static-00.iconduck.com/assets.00/placeholder-icon-2048x2048-48kucnce.png"
-                alt="Flare48 Logo"
-              />
+            <img className="h-10 w-10"
+                  src="/Flare Name Logo.png"
+                  alt="Flare48 Logo"
+               />
               <span className="text-2xl tracking-tight">Flare48</span>
             </div>
 
