@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const SavedArticles = () => {
   const [savedArticles, setSavedArticles] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const savedArticles = JSON.parse(localStorage.getItem("savedArticles")) || [];
-    setSavedArticles(savedArticles);
+    const saved = JSON.parse(localStorage.getItem("savedArticles")) || [];
+    setSavedArticles(saved);
   }, []);
 
   const handleRemoveArticle = (article) => {
@@ -17,15 +19,11 @@ const SavedArticles = () => {
     localStorage.setItem("savedArticles", JSON.stringify(updatedSavedArticles));
   };
 
-  const handleBackClick = () => {
-    window.history.back();
-  };
-
   return (
     <div className="container mx-auto px-4 py-20 relative">
       <button
-        onClick={handleBackClick}
-        className="absolute top-4 p-2 text-gray-700 bg-transparent  hover:scale-110"
+        onClick={() => navigate("/news")}
+        className="absolute top-4 left-4 p-2 text-gray-700 hover:scale-110"
       >
         <ArrowLeft size={30} />
       </button>
@@ -64,7 +62,7 @@ const SavedArticles = () => {
 
               <button
                 onClick={() => handleRemoveArticle(article)}
-                className="absolute bottom-4 right-4 p-2 text-black bg-transparent rounded-full hover:scale-110"
+                className="absolute bottom-4 right-4 p-2 text-black hover:scale-110"
               >
                 <Trash2 size={25} />
               </button>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react"; 
 import { useNavigate } from "react-router-dom";
 
 const WelcomeHero = () => {
@@ -104,6 +104,7 @@ const WelcomeHero = () => {
                 {isSignup ? "Sign Up" : "Log In"}
               </button>
               <button
+                type="button"
                 className="w-full py-2 mt-4 text-black hover:text-neutral-600 text-sm"
                 onClick={() => setIsModalOpen(false)}
               >
