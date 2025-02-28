@@ -12,8 +12,8 @@ const Navbar = () => {
         <div className="container px-4 mx-auto relative text-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-            <img className="h-10 w-10"
-                  src="/Flare Name Logo.png"
+            <img className="h-50 w-20"
+                  src="/FlareNameLogo.png"
                   alt="Flare48 Logo"
                />
               <span className="text-2xl tracking-tight">Flare48</span>
