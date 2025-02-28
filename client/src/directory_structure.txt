@@ -1,0 +1,21 @@
+.
+├── App.css
+├── App.jsx
+├── api
+│   ├── googleSearchApi.js
+│   ├── newApi.js
+│   └── rapidApi.js
+├── components
+│   ├── FAQ.jsx
+│   ├── Footer.jsx
+│   ├── Navbar.jsx
+│   ├── NewsPage.jsx
+│   ├── SavedArticles.jsx
+│   ├── SearchBox.jsx
+│   ├── ThreeNewsSection.jsx
+│   └── WelcomeHero.jsx
+├── directory_structure.txt
+├── index.css
+└── main.jsx
+
+3 directories, 16 files
