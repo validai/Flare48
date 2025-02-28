@@ -21,17 +21,16 @@ if (!process.env.MONGO_URI) {
     process.exit(1);
 }
 
-const connectDB = async () => {
-    try {
-      await mongoose.connect(process.env.MONGO_URI);
-      console.log("✅ MongoDB connected successfully!");
-    } catch (error) {
-      console.error("❌ MongoDB connection error:", error);
-      process.exit(1);
-    }
-  };
-  
-  export default connectDB;
+// Connect to MongoDB with Error Handling
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => console.log(" MongoDB connected"))
+.catch(err => {
+    console.error(" MongoDB connection error:", err);
+    process.exit(1);
+});
 
 // Basic route
 app.get('/', (_req, res) => {
