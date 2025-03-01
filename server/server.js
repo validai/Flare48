@@ -4,6 +4,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import apiRoutes from "./routes/api.js";
 import authRoutes from "./routes/auth.js";
+import errorHandler from './middleware/errorHandler.js';
 
 // Load environment variables from .env
 dotenv.config({ path: "./.env" });
@@ -76,6 +77,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
 
+app.use(errorHandler);
 
 // The server.js file is the main entry point for the Node.js server application. It loads environment variables, sets up middleware, connects to MongoDB, defines routes, and starts the server.
 // The dotenv package is used to load environment variables from a .env file.
