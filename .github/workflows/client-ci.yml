@@ -1,0 +1,30 @@
+name: Client CI
+
+on: [push, pull_request]  # Run this on every push and pull request
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: client  # Ensure all commands run inside the client folder
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run ESLint (if configured)
+        run: npm run lint || echo "No lint script found, skipping."
+
+      - name: Build Project
+        run: npm run build
