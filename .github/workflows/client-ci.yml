@@ -1,6 +1,6 @@
 name: Client CI
 
-on: [push, pull_request]  # Run this on every push and pull request
+on: [push, pull_request]
 
 jobs:
   build:
@@ -8,7 +8,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: client  # Ensure all commands run inside the client folder
+        working-directory: client  # Make sure all commands run inside client folder
 
     steps:
       - name: Checkout Repository
@@ -18,7 +18,8 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: npm
+          cache: 'npm'
+          cache-dependency-path: client/package-lock.json  # Specify correct lock file
 
       - name: Install Dependencies
         run: npm install
