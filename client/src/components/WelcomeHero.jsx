@@ -29,10 +29,34 @@ const WelcomeHero = () => {
     setIsModalOpen(!isModalOpen);
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form submitted");
-    navigate("/news");
+    
+    const formData = {
+      email: e.target.email.value,
+      password: e.target.password.value,
+      username: e.target.username.value,
+    };
+    try {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/${isSignup ? "register" : "login"}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+  
+      const data = await response.json();
+      
+      if (response.ok) {
+        console.log("Success:", data);
+        navigate("/news"); // Redirect on successful login/signup
+      } else {
+        console.error("Error:", data.message);
+      }
+    } catch (error) {
+      console.error("Network error:", error);
+    }
   };
 
   const handleGoogleAuth = () => {
@@ -148,3 +172,4 @@ const WelcomeHero = () => {
 };
 
 export default WelcomeHero;
+
