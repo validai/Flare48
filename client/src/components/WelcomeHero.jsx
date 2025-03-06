@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react"; 
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const WelcomeHero = () => {
+  console.log("WelcomeHero component rendered");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -14,21 +16,28 @@ const WelcomeHero = () => {
   ];
 
   useEffect(() => {
+    console.log("useEffect triggered - Image Slideshow");
     const intervalId = setInterval(() => {
       setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
-    }, 5000); 
-
+    }, 5000);
     return () => clearInterval(intervalId);
   }, []);
 
   const toggleModal = (type) => {
+    console.log(`toggleModal triggered - Type: ${type}`);
     setIsSignup(type === "signup");
     setIsModalOpen(!isModalOpen);
   };
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
+    console.log("Form submitted");
     navigate("/news");
+  };
+
+  const handleGoogleAuth = () => {
+    console.log("Google OAuth button clicked");
+    window.location.href = "http://localhost:3000/auth/google";
   };
 
   return (
@@ -39,7 +48,7 @@ const WelcomeHero = () => {
             Welcome to <span className="text-primary-500">Flare48</span>
           </h1>
           <p className="mt-4 text-lg md:text-xl text-black leading-relaxed max-w-lg mx-auto md:mx-0">
-            Your go-to source for the latest news from the past 48 hours. Discover trending stories across various categories, all in one place.
+            Your go-to source for the latest news from the past 48 hours.
           </p>
           <div className="mt-6 flex gap-4 justify-center md:justify-start">
             <button
@@ -56,7 +65,6 @@ const WelcomeHero = () => {
             </button>
           </div>
         </div>
-
         <div className="flex justify-center md:justify-end">
           <img
             src={images[currentImageIndex]}
@@ -67,12 +75,26 @@ const WelcomeHero = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-          <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full relative">
             <h2 className="text-2xl font-bold mb-4 text-black">
               {isSignup ? "Sign Up" : "Login"}
             </h2>
             <form onSubmit={handleFormSubmit}>
+              {isSignup && (
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-black" htmlFor="username">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="Enter your username"
+                    required
+                  />
+                </div>
+              )}
               <div className="mb-4">
                 <label className="block text-sm font-semibold text-black" htmlFor="email">
                   Email
@@ -102,6 +124,13 @@ const WelcomeHero = () => {
                 className="w-full py-3 bg-black text-white rounded-lg hover:bg-neutral-800 transition"
               >
                 {isSignup ? "Sign Up" : "Log In"}
+              </button>
+              <button
+                type="button"
+                className="w-full py-3 mt-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                onClick={handleGoogleAuth}
+              >
+                Continue with Google
               </button>
               <button
                 type="button"
