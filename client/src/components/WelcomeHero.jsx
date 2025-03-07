@@ -93,7 +93,7 @@ const WelcomeHero = () => {
           <img
             src={images[currentImageIndex]}
             alt="News"
-            className="rounded-xl shadow-lg w-full h-[450px] md:h-[600px] lg:h-[700px] transition-all duration-500 object-cover"
+            className="rounded-xl shadow-lg w-full h-[350px] md:h-[450px] lg:h-[550px] transition-all duration-500 object-cover"
           />
         </div>
       </div>
