@@ -9,14 +9,10 @@ const Navbar = () => {
   return (
     <>
       <nav className="sticky top-0 z-50 py-3 bg-white border-b border-neutral-700/80">
-        <div className="container px-4 mx-auto relative text-sm">
+        <div className="container px-4 mx-auto relative m-3 text-sm">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-            <img className="h-50 w-20"
-                  src="/FlareNameLogo.png"
-                  alt="Flare48 Logo"
-               />
-              <span className="text-2xl tracking-tight">Flare48</span>
+              <span className="text-4xl font-bold tracking-tight">Flare48</span>
             </div>
 
             <div className="hidden md:flex flex-grow justify-center">
