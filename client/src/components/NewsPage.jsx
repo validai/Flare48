@@ -56,7 +56,7 @@ const NewsPage = () => {
     <div>
       <h1 className="text-4xl font-bold text-center text-gray-900">Latest News</h1>
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="m-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         {articles.map((article, index) => {
           const isSaved = savedArticles.some(
             (savedArticle) => savedArticle.url === article.url
@@ -68,19 +68,21 @@ const NewsPage = () => {
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block p-6 bg-white dark:bg-neutral-100 border border-neutral-700 shadow-lg rounded-2xl hover:shadow-xl transition transform hover:-translate-y-1"
+                className="block p-6 bg-white dark:bg-neutral-100 border border-neutral-700 shadow-lg rounded-2xl hover:shadow-xl transition transform hover:-translate-y-1 flex flex-col h-full"
               >
                 <img
                   src={article.image || "https://via.placeholder.com/300"}
                   alt={article.title}
                   className="w-full h-64 object-cover rounded-xl"
                 />
-                <h3 className="mt-4 text-lg font-semibold text-black dark:text-black line-clamp-3">
-                  {article.title}
-                </h3>
-                <p className="mt-2 text-sm text-black dark:text-black">
-                  {new Date(article.publishedAt).toLocaleString()}
-                </p>
+                <div className="flex flex-col flex-grow">
+                  <h3 className="mt-4 text-lg font-semibold text-black dark:text-black line-clamp-3">
+                    {article.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-black dark:text-black">
+                    {new Date(article.publishedAt).toLocaleString()}
+                  </p>
+                </div>
               </a>
 
               <button
