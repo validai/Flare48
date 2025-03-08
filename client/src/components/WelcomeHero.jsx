@@ -31,14 +31,19 @@ const WelcomeHero = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    
+  
     const formData = {
-      email: e.target.email.value,
-      password: e.target.password.value,
-      username: e.target.username.value,
+      email: e.target.email.value.trim(),
+      password: e.target.password.value.trim(),
+      username: e.target.username?.value.trim(), 
     };
+  
+ 
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+  
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/auth/${isSignup ? "register" : "login"}`, {
+      const endpoint = isSignup ? "register" : "login";
+      const response = await fetch(`${BACKEND_URL}/auth/${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -46,18 +51,25 @@ const WelcomeHero = () => {
         body: JSON.stringify(formData),
       });
   
-      const data = await response.json();
-      
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        console.error("Failed to parse JSON response:", err);
+        throw new Error("Invalid response from server");
+      }
+  
       if (response.ok) {
         console.log("Success:", data);
-        navigate("/news"); // Redirect on successful login/signup
+        navigate("/news"); 
       } else {
-        console.error("Error:", data.message);
+        console.error("Error:", data?.message || "Something went wrong");
       }
     } catch (error) {
       console.error("Network error:", error);
     }
   };
+  
 
   const handleGoogleAuth = () => {
     console.log("Google OAuth button clicked");
