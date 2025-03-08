@@ -46,10 +46,10 @@ router.get(
 // Google OAuth Callback Route
 router.get(
   "/google/callback",
-  passport.authenticate("google", { failureRedirect: "/" }),
-  (req, res) => {
-      res.json({ message: "Google Authentication Successful", user: req.user });
-  }
+  passport.authenticate("google", {
+    failureRedirect: "/", // Redirect to homepage on failure
+    successRedirect: "/dashboard", // Redirect to user dashboard on success
+  })
 );
 
 export default router;

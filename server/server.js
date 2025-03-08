@@ -38,6 +38,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware Setup
 console.log("Initializing Middleware...");
 app.use(cors({ origin: process.env.CLIENT_URL }));
+app.use(cors({ origin: process.env.VITE_FRONTEND_URL, credentials: true }));v
 console.log("✅ CORS Enabled");
 app.use(express.json());
 console.log("✅ JSON Middleware Enabled");
@@ -56,6 +57,9 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 console.log("✅ Passport.js Initialized");
+
+// Register Routes
+app.use("/auth", authRoutes);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
