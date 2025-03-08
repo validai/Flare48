@@ -58,4 +58,3 @@ export default router;
 // Special error handling is added to provide detailed error messages for debugging and validation purposes.
 // The verifyToken middleware function checks for a valid JWT token in the Authorization header and verifies it using the JWT_SECRET from the environment variables.
 // The User model is imported from the models/User.js file to interact with the MongoDB User collection.
-// The bcrypt library is used to hash passwords for secure storage and comparison during login.
