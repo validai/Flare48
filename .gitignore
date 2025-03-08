@@ -5,3 +5,4 @@ dist/
 client/.env
 server/.env
 project-structure.txt
+.DS_Store

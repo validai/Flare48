@@ -47,14 +47,17 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", {
-    failureRedirect: "/", // Redirect to homepage on failure
-    successRedirect: "/dashboard", // Redirect to user dashboard on success
-  })
+    failureRedirect: "/",
+  }),
+  (req, res) => {
+    res.redirect(`${process.env.VITE_FRONTEND_URL}`); // Redirect to the frontend home page
+  }
 );
+
 
 export default router;
 
-// The auth.js file contains the routes for user registration, user login, and a protected route that requires a valid JWT token. The protected route is a simple example to demonstrate how to create a route that requires authentication.
+// The auth.js file contains the routes for user registration, user login, and a protected route that requires a valid JWT token.
 // Special error handling is added to provide detailed error messages for debugging and validation purposes.
 // The verifyToken middleware function checks for a valid JWT token in the Authorization header and verifies it using the JWT_SECRET from the environment variables.
 // The User model is imported from the models/User.js file to interact with the MongoDB User collection.
