@@ -60,6 +60,14 @@ console.log("✅ Passport.js Initialized");
 
 // Register Routes
 app.use("/auth", authRoutes);
+app._router.stack.forEach((middleware) => {
+  if (middleware.route) {
+    console.log(middleware.route.path);}});
+app.use("/api", apiRoutes);
+app._router.stack.forEach((middleware) => {
+  if (middleware.route) {
+    console.log(middleware.route.path);}}
+);
 
 console.log("✅ Registered Routes:");
 app._router.stack.forEach((r) => {
