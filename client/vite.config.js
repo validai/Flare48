@@ -2,9 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
-
 export default defineConfig({
-  plugins: [react(),tailwindcss()],
+  plugins: [react(), tailwindcss()],
   base: "./",
   server: {
     proxy: {
@@ -12,6 +11,11 @@ export default defineConfig({
     }
   },
   preview: {
-    allowedHosts: ['flare48-6c1x.onrender.com', 'localhost'],
+    allowedHosts: [
+      'flare48.onrender.com',
+      'flare48-6c1x.onrender.com',
+      'flare48-j45i.onrender.com',
+      'localhost'
+    ],
   }
 })
