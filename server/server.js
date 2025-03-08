@@ -61,6 +61,13 @@ console.log("✅ Passport.js Initialized");
 // Register Routes
 app.use("/auth", authRoutes);
 
+console.log("✅ Registered Routes:");
+app._router.stack.forEach((r) => {
+  if (r.route && r.route.path) {
+    console.log(`${Object.keys(r.route.methods)[0].toUpperCase()} ${r.route.path}`);
+  }
+});
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ Connected to MongoDB"))
