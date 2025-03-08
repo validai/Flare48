@@ -38,7 +38,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware Setup
 console.log("Initializing Middleware...");
 app.use(cors({ origin: process.env.CLIENT_URL }));
-app.use(cors({ origin: process.env.VITE_FRONTEND_URL, credentials: true }));v
+app.use(cors({ origin: process.env.VITE_FRONTEND_URL, credentials: true }));
 console.log("✅ CORS Enabled");
 app.use(express.json());
 console.log("✅ JSON Middleware Enabled");
