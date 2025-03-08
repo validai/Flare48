@@ -73,8 +73,10 @@ const WelcomeHero = () => {
 
   const handleGoogleAuth = () => {
     console.log("Google OAuth button clicked");
-    window.location.href = "http://localhost:3000/auth/google";
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+    window.location.href = `${backendUrl}/auth/google`;
   };
+  
 
   return (
     <section className="container mx-auto px-6 py-16 md:py-24">
