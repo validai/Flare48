@@ -1,7 +1,9 @@
 .
+├── NEWtree3824.txt
 ├── config
-│   └── env.js
+│   └── passport.js
 ├── controllers
+│   ├── authControllers.js
 │   └── newsController.js
 ├── dist
 ├── middleware
@@ -52,6 +54,134 @@
 │   │       ├── package.json
 │   │       └── readme.md
 │   ├── @types
+│   │   ├── body-parser
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── connect
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── express
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── express-serve-static-core
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── http-errors
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── mime
+│   │   │   ├── LICENSE
+│   │   │   ├── Mime.d.ts
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   ├── lite.d.ts
+│   │   │   └── package.json
+│   │   ├── node
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── assert
+│   │   │   │   └── strict.d.ts
+│   │   │   ├── assert.d.ts
+│   │   │   ├── async_hooks.d.ts
+│   │   │   ├── buffer.buffer.d.ts
+│   │   │   ├── buffer.d.ts
+│   │   │   ├── child_process.d.ts
+│   │   │   ├── cluster.d.ts
+│   │   │   ├── compatibility
+│   │   │   │   ├── disposable.d.ts
+│   │   │   │   ├── index.d.ts
+│   │   │   │   ├── indexable.d.ts
+│   │   │   │   └── iterators.d.ts
+│   │   │   ├── console.d.ts
+│   │   │   ├── constants.d.ts
+│   │   │   ├── crypto.d.ts
+│   │   │   ├── dgram.d.ts
+│   │   │   ├── diagnostics_channel.d.ts
+│   │   │   ├── dns
+│   │   │   │   └── promises.d.ts
+│   │   │   ├── dns.d.ts
+│   │   │   ├── dom-events.d.ts
+│   │   │   ├── domain.d.ts
+│   │   │   ├── events.d.ts
+│   │   │   ├── fs
+│   │   │   │   └── promises.d.ts
+│   │   │   ├── fs.d.ts
+│   │   │   ├── globals.d.ts
+│   │   │   ├── globals.typedarray.d.ts
+│   │   │   ├── http.d.ts
+│   │   │   ├── http2.d.ts
+│   │   │   ├── https.d.ts
+│   │   │   ├── index.d.ts
+│   │   │   ├── inspector.d.ts
+│   │   │   ├── module.d.ts
+│   │   │   ├── net.d.ts
+│   │   │   ├── os.d.ts
+│   │   │   ├── package.json
+│   │   │   ├── path.d.ts
+│   │   │   ├── perf_hooks.d.ts
+│   │   │   ├── process.d.ts
+│   │   │   ├── punycode.d.ts
+│   │   │   ├── querystring.d.ts
+│   │   │   ├── readline
+│   │   │   │   └── promises.d.ts
+│   │   │   ├── readline.d.ts
+│   │   │   ├── repl.d.ts
+│   │   │   ├── sea.d.ts
+│   │   │   ├── sqlite.d.ts
+│   │   │   ├── stream
+│   │   │   │   ├── consumers.d.ts
+│   │   │   │   ├── promises.d.ts
+│   │   │   │   └── web.d.ts
+│   │   │   ├── stream.d.ts
+│   │   │   ├── string_decoder.d.ts
+│   │   │   ├── test.d.ts
+│   │   │   ├── timers
+│   │   │   │   └── promises.d.ts
+│   │   │   ├── timers.d.ts
+│   │   │   ├── tls.d.ts
+│   │   │   ├── trace_events.d.ts
+│   │   │   ├── ts5.6
+│   │   │   │   ├── buffer.buffer.d.ts
+│   │   │   │   ├── globals.typedarray.d.ts
+│   │   │   │   └── index.d.ts
+│   │   │   ├── tty.d.ts
+│   │   │   ├── url.d.ts
+│   │   │   ├── util.d.ts
+│   │   │   ├── v8.d.ts
+│   │   │   ├── vm.d.ts
+│   │   │   ├── wasi.d.ts
+│   │   │   ├── worker_threads.d.ts
+│   │   │   └── zlib.d.ts
+│   │   ├── qs
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── range-parser
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── send
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
+│   │   ├── serve-static
+│   │   │   ├── LICENSE
+│   │   │   ├── README.md
+│   │   │   ├── index.d.ts
+│   │   │   └── package.json
 │   │   ├── webidl-conversions
 │   │   │   ├── LICENSE
 │   │   │   ├── README.md
@@ -216,6 +346,16 @@
 │   │   ├── README.md
 │   │   ├── index.js
 │   │   └── package.json
+│   ├── base64url
+│   │   ├── LICENSE
+│   │   ├── dist
+│   │   │   ├── base64url.d.ts
+│   │   │   ├── base64url.js
+│   │   │   ├── pad-string.d.ts
+│   │   │   └── pad-string.js
+│   │   ├── index.js
+│   │   ├── package.json
+│   │   └── readme.md
 │   ├── bcryptjs
 │   │   ├── LICENSE
 │   │   ├── README.md
@@ -606,6 +746,29 @@
 │   │   │   ├── utils.js
 │   │   │   └── view.js
 │   │   └── package.json
+│   ├── express-session
+│   │   ├── HISTORY.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── index.js
+│   │   ├── node_modules
+│   │   │   ├── cookie
+│   │   │   │   ├── LICENSE
+│   │   │   │   ├── README.md
+│   │   │   │   ├── SECURITY.md
+│   │   │   │   ├── index.js
+│   │   │   │   └── package.json
+│   │   │   └── cookie-signature
+│   │   │       ├── History.md
+│   │   │       ├── Readme.md
+│   │   │       ├── index.js
+│   │   │       └── package.json
+│   │   ├── package.json
+│   │   └── session
+│   │       ├── cookie.js
+│   │       ├── memory.js
+│   │       ├── session.js
+│   │       └── store.js
 │   ├── fill-range
 │   │   ├── LICENSE
 │   │   ├── README.md
@@ -1929,6 +2092,32 @@
 │   │   ├── README.md
 │   │   ├── index.js
 │   │   └── package.json
+│   ├── oauth
+│   │   ├── LICENSE
+│   │   ├── Makefile
+│   │   ├── Readme.md
+│   │   ├── examples
+│   │   │   ├── express-gdata
+│   │   │   │   ├── server.js
+│   │   │   │   └── views
+│   │   │   │       ├── google_calendars.ejs
+│   │   │   │       ├── google_contacts.ejs
+│   │   │   │       └── layout.ejs
+│   │   │   ├── github-example.js
+│   │   │   ├── term.ie.oauth-HMAC-SHA1.js
+│   │   │   └── twitter-example.js
+│   │   ├── index.js
+│   │   ├── lib
+│   │   │   ├── _utils.js
+│   │   │   ├── oauth.js
+│   │   │   ├── oauth2.js
+│   │   │   └── sha1.js
+│   │   ├── package.json
+│   │   └── tests
+│   │       ├── oauth2tests.js
+│   │       ├── oauthtests.js
+│   │       ├── sha1tests.js
+│   │       └── shared.js
 │   ├── object-assign
 │   │   ├── index.js
 │   │   ├── license
@@ -1975,14 +2164,95 @@
 │   │   ├── README.md
 │   │   ├── index.js
 │   │   └── package.json
+│   ├── on-headers
+│   │   ├── HISTORY.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── index.js
+│   │   └── package.json
 │   ├── parseurl
 │   │   ├── HISTORY.md
 │   │   ├── LICENSE
 │   │   ├── README.md
 │   │   ├── index.js
 │   │   └── package.json
+│   ├── passport
+│   │   ├── CHANGELOG.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── etc
+│   │   │   └── jsdoc.json
+│   │   ├── lib
+│   │   │   ├── authenticator.js
+│   │   │   ├── errors
+│   │   │   │   └── authenticationerror.js
+│   │   │   ├── framework
+│   │   │   │   └── connect.js
+│   │   │   ├── http
+│   │   │   │   └── request.js
+│   │   │   ├── index.js
+│   │   │   ├── middleware
+│   │   │   │   ├── authenticate.js
+│   │   │   │   └── initialize.js
+│   │   │   ├── sessionmanager.js
+│   │   │   └── strategies
+│   │   │       └── session.js
+│   │   ├── package.json
+│   │   └── sponsors
+│   │       ├── descope-dark.svg
+│   │       ├── descope.svg
+│   │       ├── fusionauth.png
+│   │       ├── fusionauth.svg
+│   │       ├── loginradius.png
+│   │       ├── snyk.png
+│   │       └── workos.png
+│   ├── passport-google-oauth20
+│   │   ├── CONTRIBUTING.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── lib
+│   │   │   ├── errors
+│   │   │   │   ├── googleplusapierror.js
+│   │   │   │   └── userinfoerror.js
+│   │   │   ├── index.js
+│   │   │   ├── profile
+│   │   │   │   ├── googleplus.js
+│   │   │   │   └── openid.js
+│   │   │   └── strategy.js
+│   │   └── package.json
+│   ├── passport-oauth2
+│   │   ├── CHANGELOG.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── lib
+│   │   │   ├── errors
+│   │   │   │   ├── authorizationerror.js
+│   │   │   │   ├── internaloautherror.js
+│   │   │   │   └── tokenerror.js
+│   │   │   ├── index.js
+│   │   │   ├── state
+│   │   │   │   ├── null.js
+│   │   │   │   ├── pkcesession.js
+│   │   │   │   ├── session.js
+│   │   │   │   └── store.js
+│   │   │   ├── strategy.js
+│   │   │   └── utils.js
+│   │   └── package.json
+│   ├── passport-strategy
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── lib
+│   │   │   ├── index.js
+│   │   │   └── strategy.js
+│   │   └── package.json
 │   ├── path-to-regexp
 │   │   ├── LICENSE
+│   │   ├── Readme.md
+│   │   ├── index.js
+│   │   └── package.json
+│   ├── pause
+│   │   ├── History.md
+│   │   ├── Makefile
 │   │   ├── Readme.md
 │   │   ├── index.js
 │   │   └── package.json
@@ -2048,6 +2318,12 @@
 │   │       ├── parse.js
 │   │       ├── stringify.js
 │   │       └── utils.js
+│   ├── random-bytes
+│   │   ├── HISTORY.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── index.js
+│   │   └── package.json
 │   ├── range-parser
 │   │   ├── HISTORY.md
 │   │   ├── LICENSE
@@ -2313,6 +2589,18 @@
 │   │   ├── README.md
 │   │   ├── index.js
 │   │   └── package.json
+│   ├── uid-safe
+│   │   ├── HISTORY.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── index.js
+│   │   └── package.json
+│   ├── uid2
+│   │   ├── HISTORY.md
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── index.js
+│   │   └── package.json
 │   ├── undefsafe
 │   │   ├── LICENSE
 │   │   ├── README.md
@@ -2320,6 +2608,48 @@
 │   │   ├── lib
 │   │   │   └── undefsafe.js
 │   │   └── package.json
+│   ├── undici-types
+│   │   ├── LICENSE
+│   │   ├── README.md
+│   │   ├── agent.d.ts
+│   │   ├── api.d.ts
+│   │   ├── balanced-pool.d.ts
+│   │   ├── cache.d.ts
+│   │   ├── client.d.ts
+│   │   ├── connector.d.ts
+│   │   ├── content-type.d.ts
+│   │   ├── cookies.d.ts
+│   │   ├── diagnostics-channel.d.ts
+│   │   ├── dispatcher.d.ts
+│   │   ├── env-http-proxy-agent.d.ts
+│   │   ├── errors.d.ts
+│   │   ├── eventsource.d.ts
+│   │   ├── fetch.d.ts
+│   │   ├── file.d.ts
+│   │   ├── filereader.d.ts
+│   │   ├── formdata.d.ts
+│   │   ├── global-dispatcher.d.ts
+│   │   ├── global-origin.d.ts
+│   │   ├── handlers.d.ts
+│   │   ├── header.d.ts
+│   │   ├── index.d.ts
+│   │   ├── interceptors.d.ts
+│   │   ├── mock-agent.d.ts
+│   │   ├── mock-client.d.ts
+│   │   ├── mock-errors.d.ts
+│   │   ├── mock-interceptor.d.ts
+│   │   ├── mock-pool.d.ts
+│   │   ├── package.json
+│   │   ├── patch.d.ts
+│   │   ├── pool-stats.d.ts
+│   │   ├── pool.d.ts
+│   │   ├── proxy-agent.d.ts
+│   │   ├── readable.d.ts
+│   │   ├── retry-agent.d.ts
+│   │   ├── retry-handler.d.ts
+│   │   ├── util.d.ts
+│   │   ├── webidl.d.ts
+│   │   └── websocket.d.ts
 │   ├── unpipe
 │   │   ├── HISTORY.md
 │   │   ├── LICENSE
@@ -2366,14 +2696,9 @@
 ├── package.json
 ├── routes
 │   ├── api.js
-│   ├── auth.js
-│   └── index.js
+│   └── auth.js
 ├── server.js
-├── server_tree.txt
-├── services
-│   └── newsAPI.js
-├── src
 └── utils
     └── logger.js
 
-356 directories, 2021 files
+411 directories, 2291 files
