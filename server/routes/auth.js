@@ -48,19 +48,20 @@ router.get(
 );
 
 // Google OAuth Callback Route
-router.get("/google/callback",
+router.get(
+  "/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
     console.log("Google OAuth Success, Redirecting...");
     console.log("User Details:", req.user);
 
-    const redirectURL = process.env.VITE_FRONTEND_URL ? `${process.env.VITE_FRONTEND_URL}/dashboard` : "http://localhost:5173/dashboard";
+    const redirectURL = process.env.VITE_FRONTEND_URL
+      ? `${process.env.VITE_FRONTEND_URL}/dashboard`
+      : "http://localhost:5173/dashboard";
+
     res.redirect(redirectURL);
   }
 );
-
-
-
 
 export default router;
 
