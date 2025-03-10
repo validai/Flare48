@@ -4,25 +4,30 @@ import jwt from "jsonwebtoken";
 
 // User Registration Controller
 export const register = async (req, res) => {
+  console.log("📩 Incoming Request Headers:", req.headers);
   console.log("📩 Incoming Request Body:", req.body);
+
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).json({ error: "Request body is empty or not parsed" });
+  }
+
+  const { username, email, password } = req.body;
+
+  if (!username || !email || !password) {
+    return res.status(400).json({ error: "All fields are required (username, email, password)" });
+  }
+
   try {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: "All fields are required (username, email, password)" });
-    }
-
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) return res.status(400).json({ error: "Username or Email already exists" });
 
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, 12);
     const newUser = new User({ username, email, password: hashedPassword });
 
     await newUser.save();
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
-    console.error("Registration Error:", error);
+    console.error("❌ Registration Error:", error);
     res.status(500).json({ error: "Server error during registration", details: error.message });
   }
 };
