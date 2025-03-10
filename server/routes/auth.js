@@ -1,36 +1,35 @@
 import express from "express";
 import dotenv from "dotenv";
 import passport from "../config/passport.js";
-import { register, login, protectedRoute, saveArticle, removeArticle } from "../controllers/authControllers.js";
+import jwt from "jsonwebtoken";
+import { register, login, protectedRoute } from "../controllers/authControllers.js";
 
 dotenv.config();
 const router = express.Router();
 
-console.log("✅ auth.js is running");
+console.log("Auth API is running...");
 
-// Base route to check if auth API is reachable!
-router.get("/", (req, res) => {
+// Base Route - Health Check
+router.get("/", (_req, res) => {
   res.json({ message: "Auth API is working!" });
 });
 
-// User Registration Route (Moved to Controller)
+// User Registration & Login Routes
 router.post("/register", register);
-
-// User Login Route (Moved to Controller)
 router.post("/login", login);
-
-// Protected Route (Moved to Controller)
 router.get("/protected", verifyToken, protectedRoute);
 
 router.post("/saveArticle", saveArticle)
 
 router.post("/removeArticle", removeArticle)
 
-// Middleware to Verify Token
+// Middleware to Verify JWT Token
 function verifyToken(req, res, next) {
   const token = req.header("Authorization")?.split(" ")[1];
+
   if (!token) {
-    return res.status(401).json({ error: "Access Denied: No token provided" });
+    console.warn("Access Denied: No Token Provided");
+    return res.status(401).json({ error: "Access Denied: No Token provided" });
   }
 
   try {
@@ -44,34 +43,34 @@ function verifyToken(req, res, next) {
 }
 
 // Google OAuth Login Route
-router.get(
-  "/google",
-  (req, res, next) => {
-    console.log("Google OAuth Login Attempted");
-    next();
-  },
-  passport.authenticate("google", { scope: ["profile", "email"] })
-);
+router.get("/google", (req, res, next) => {
+  console.log("Google OAuth Login Attempted...");
+  passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+});
 
+// Google OAuth Callback Route
 // Google OAuth Callback Route
 router.get(
   "/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    console.log("Google OAuth Success, Redirecting...");
-    console.log("User Details:", req.user);
+    if (!req.user) {
+      console.error("Authentication Failed: No user data received.");
+      return res.redirect("/");
+    }
 
-    const redirectURL = process.env.VITE_FRONTEND_URL
-      ? `${process.env.VITE_FRONTEND_URL}/dashboard`
+    console.log("Google Authentication Success:", req.user);
+
+    // Ensure CLIENT_URL exists, fallback to localhost dashboard
+    const redirectURL = process.env.CLIENT_URL
+      ? `${process.env.CLIENT_URL}/dashboard`
       : "http://localhost:5173/dashboard";
 
+    console.log("Redirecting to:", redirectURL);
     res.redirect(redirectURL);
   }
 );
 
+
 export default router;
 
-// The auth.js file contains the routes for user registration, user login, and a protected route that requires a valid JWT token.
-// Special error handling is added to provide detailed error messages for debugging and validation purposes.
-// The verifyToken middleware function checks for a valid JWT token in the Authorization header and verifies it using the JWT_SECRET from the environment variables.
-// The User model is imported from the models/User.js file to interact with the MongoDB User collection.

@@ -8,81 +8,82 @@ import apiRoutes from "./routes/api.js";
 import authRoutes from "./routes/auth.js";
 import errorHandler from "./middleware/errorHandler.js";
 
-// Load environment variables from .env
+// 🔹 Load environment variables
 dotenv.config({ path: "./.env" });
 
-// Debug: Check if .env loaded properly
+// 🔹 Debug: Check if .env file is loaded properly
 console.log("Checking .env File...");
-const requiredEnvVars = ["MONGO_URI", "JWT_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
-requiredEnvVars.forEach((key) => {
-  if (!process.env[key]) console.warn(`Warning: ${key} is not defined.`);
-});
+const requiredEnvVars = [
+  "MONGO_URI",
+  "JWT_SECRET",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "SESSION_SECRET"
+];
 
-console.log("Loaded Environment Variables:");
+let missingVars = [];
 requiredEnvVars.forEach((key) => {
-  console.log(`${key}:`, process.env[key] ? "Loaded" : "Not Found");
-});
-
-// Ensure Required Environment Variables Are Loaded
-for (const key of requiredEnvVars) {
   if (!process.env[key]) {
-    console.error(`ERROR: ${key} is missing in .env file.`);
-    process.exit(1);
+    console.warn(`Warning: ${key} is NOT defined.`);
+    missingVars.push(key);
+  } else {
+    console.log(`${key}: Loaded`);
   }
+});
+
+// 🔹 Exit if Required Variables Are Missing
+if (missingVars.length) {
+  console.error(`ERROR: Missing environment variables: ${missingVars.join(", ")}`);
+  process.exit(1);
 }
 
-// Initialize Express App
+// 🔹 Initialize Express App
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware Setup
+// 🔹 Middleware Setup
 console.log("Initializing Middleware...");
-app.use(cors({ origin: process.env.CLIENT_URL }));
-app.use(cors({ origin: process.env.VITE_FRONTEND_URL, credentials: true }));
-console.log("✅ CORS Enabled");
-app.use(express.json());
-console.log("✅ JSON Middleware Enabled");
+app.use(cors({ origin: [process.env.CLIENT_URL, process.env.VITE_FRONTEND_URL], credentials: true }));
+console.log("CORS Enabled");
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+console.log("JSON Middleware Enabled");
 
-// Express Session Setup for Passport
+// 🔹 Express Session Setup for Passport
 app.use(
   session({
     secret: process.env.SESSION_SECRET || "default_secret",
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === "production" }, // Secure cookies in production
+    cookie: { secure: process.env.NODE_ENV === "production" },
   })
 );
 
-// Initialize Passport
+// 🔹 Initialize Passport.js
 app.use(passport.initialize());
 app.use(passport.session());
-console.log("✅ Passport.js Initialized");
+console.log("Passport.js Initialized");
 
-// Register Routes
-app.use("/api/auth", authRoutes);
-
-console.log("✅ Imported authRoutes:", authRoutes);
-
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ Connected to MongoDB"))
+// 🔹 MongoDB Connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("Connected to MongoDB"))
   .catch((err) => {
-    console.error("❌ MongoDB Connection Error:", err);
-    process.exit(1); // Exit process if DB connection fails
+    console.error("MongoDB Connection Error:", err);
+    process.exit(1);
   });
 
-// Debugging: Log Routes Being Loaded
+// 🔹 Debugging: Log Routes Being Loaded
 console.log("Initializing API & Authentication Routes...");
 
-// Root Route
+// 🔹 Root Route
 app.get("/", (_req, res) => {
   console.log("Root Route Accessed: GET /");
   res.send("Flare48 Server is Running!");
 });
 
-// API & Authentication Routes
+// 🔹 API & Authentication Routes
 try {
   app.use("/api", (req, res, next) => {
     console.log(`API Route Accessed: ${req.method} ${req.originalUrl}`);
@@ -94,27 +95,22 @@ try {
     next();
   }, authRoutes);
 
-  console.log("✅ API & Auth Routes Initialized");
+  console.log("API & Auth Routes Initialized");
 } catch (err) {
-  console.error("❌ Error Loading Routes:", err.message);
+  console.error("Error Loading Routes:", err.message);
 }
 
-// Route Not Found Handler
+// 🔹 Route Not Found Handler
 app.use("*", (req, res) => {
-  console.warn(`⚠️ Route Not Found: ${req.method} ${req.originalUrl}`);
+  console.warn(`Route Not Found: ${req.method} ${req.originalUrl}`);
   res.status(404).json({ error: "Route Not Found", path: req.originalUrl });
 });
 
-// Global Error Handling Middleware
+// 🔹 Global Error Handling Middleware
 app.use(errorHandler);
 
-// Start the Server
+// 🔹 Start the Server
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log("Loaded Routes:", app._router.stack.filter(r => r.route).map(r => r.route.path));
 });
-
-
-// The server.js file is the main entry point for the Node.js server application. It loads environment variables, sets up middleware, connects to MongoDB, defines routes, and starts the server.
-// The dotenv package is used to load environment variables from a .env file.
-// The express package is used to create the server and handle HTTP requests.
-// The cors package is used to enable Cross-Origin Resource Sharing (CORS) for the server.

@@ -79,7 +79,7 @@ const WelcomeHero = () => {
   const handleGoogleAuth = () => {
     console.log("Google OAuth button clicked");
     const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
-    window.location.href = `${backendUrl}/auth/google`;
+    window.location.href = `${backendUrl}/api/auth/google`;
   };
   
 
