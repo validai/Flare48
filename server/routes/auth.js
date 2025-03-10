@@ -45,21 +45,28 @@ router.get("/google", (req, res, next) => {
 });
 
 // Google OAuth Callback Route
+// Google OAuth Callback Route
 router.get(
   "/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    console.log("Google OAuth Success, Redirecting...");
-    console.log("User Details:", req.user);
+    if (!req.user) {
+      console.error("Authentication Failed: No user data received.");
+      return res.redirect("/");
+    }
 
-    const redirectURL = process.env.VITE_FRONTEND_URL
-      ? `${process.env.VITE_FRONTEND_URL}/dashboard`
+    console.log("Google Authentication Success:", req.user);
+
+    // Ensure CLIENT_URL exists, fallback to localhost dashboard
+    const redirectURL = process.env.CLIENT_URL
+      ? `${process.env.CLIENT_URL}/dashboard`
       : "http://localhost:5173/dashboard";
 
-    console.log(`Redirecting to: ${redirectURL}`);
+    console.log("Redirecting to:", redirectURL);
     res.redirect(redirectURL);
   }
 );
+
 
 export default router;
 
