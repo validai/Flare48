@@ -42,6 +42,8 @@ app.use(cors({ origin: process.env.VITE_FRONTEND_URL, credentials: true }));
 console.log("✅ CORS Enabled");
 app.use(express.json());
 console.log("✅ JSON Middleware Enabled");
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Express Session Setup for Passport
 app.use(
