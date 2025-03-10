@@ -8,8 +8,31 @@ import apiRoutes from "./routes/api.js";
 import authRoutes from "./routes/auth.js";
 import errorHandler from "./middleware/errorHandler.js";
 
-// 🔹 Load environment variables
-dotenv.config({ path: "./.env" });
+
+// Load environment variables
+dotenv.config();
+
+// Ensure SESSION_SECRET is loaded
+if (!process.env.SESSION_SECRET) {
+  console.error("ERROR: SESSION_SECRET is missing in .env file.");
+  process.exit(1);
+} else {
+  console.log("✅ SESSION_SECRET Loaded:", process.env.SESSION_SECRET);
+}
+
+// Setup Express Session for Authentication
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "fallback_secret",
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: process.env.NODE_ENV === "production" }, // Secure cookies in production
+  })
+);
+
+
+console.log("Express Session Initialized with Secure Secret");
+
 
 // 🔹 Debug: Check if .env file is loaded properly
 console.log("Checking .env File...");

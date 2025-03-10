@@ -7,7 +7,7 @@
   "scripts": {
     "build": "echo 'No build step required for JavaScript'",
     "start": "node server.js",
-    "dev": "node index.js"
+    "dev": "node server.js"
   },
   "dependencies": {
     "@types/express": "^5.0.0",

@@ -48,7 +48,7 @@ router.get("/google", (req, res, next) => {
   passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
 });
 
-// Google OAuth Callback Route
+
 // Google OAuth Callback Route
 router.get(
   "/google/callback",
