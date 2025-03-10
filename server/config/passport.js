@@ -1,25 +1,28 @@
-import passport from "passport";
-import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import dotenv from "dotenv";
-
 dotenv.config();
 
-console.log("Initializing Google OAuth Strategy...");
-console.log("GOOGLE_CLIENT_ID:", process.env.GOOGLE_CLIENT_ID);
-console.log("GOOGLE_CLIENT_SECRET:", process.env.GOOGLE_CLIENT_SECRET);
-console.log("GOOGLE_REDIRECT_URI:", process.env.GOOGLE_REDIRECT_URI);
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 
-// Debugging: Ensure required environment variables are loaded
-if (!process.env.GOOGLE_CLIENT_ID) console.error("ERROR: GOOGLE_CLIENT_ID is missing.");
-if (!process.env.GOOGLE_CLIENT_SECRET) console.error("ERROR: GOOGLE_CLIENT_SECRET is missing.");
-if (!process.env.GOOGLE_REDIRECT_URI) console.error("ERROR: GOOGLE_REDIRECT_URI is missing.");
+
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REDIRECT_URI) {
+  throw new Error("Missing required Google OAuth environment variables.");
+}
+
+
+const callbackURL =
+  process.env.NODE_ENV === "production"
+    ? process.env.GOOGLE_REDIRECT_URI
+    : "http://localhost:3000/auth/google/callback";
+
+console.log("Using callback URL:", callbackURL);
 
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_REDIRECT_URI, // Use correct redirect URI from .env
+      callbackURL: callbackURL,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
