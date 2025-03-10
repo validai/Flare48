@@ -4,7 +4,7 @@ import jwt from "jsonwebtoken";
 
 // User Registration Controller
 export const register = async (req, res) => {
-  console.log("✅ register function is running");
+  console.log("📩 Incoming Request Body:", req.body);
   try {
     const { username, email, password } = req.body;
 
