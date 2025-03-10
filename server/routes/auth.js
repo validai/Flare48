@@ -6,6 +6,8 @@ import { register, login, protectedRoute } from "../controllers/authControllers.
 dotenv.config();
 const router = express.Router();
 
+console.log("✅ auth.js is running");
+
 // Base route to check if auth API is reachable!
 router.get("/", (req, res) => {
   res.json({ message: "Auth API is working!" });

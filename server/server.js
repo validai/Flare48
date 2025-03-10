@@ -59,14 +59,9 @@ app.use(passport.session());
 console.log("✅ Passport.js Initialized");
 
 // Register Routes
-app.use("/auth", authRoutes);
+app.use("/api/auth", authRoutes);
 
-console.log("✅ Registered Routes:");
-app._router.stack.forEach((r) => {
-  if (r.route && r.route.path) {
-    console.log(`${Object.keys(r.route.methods)[0].toUpperCase()} ${r.route.path}`);
-  }
-});
+console.log("✅ Imported authRoutes:", authRoutes);
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)

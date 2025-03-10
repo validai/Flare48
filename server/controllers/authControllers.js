@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 
 // User Registration Controller
 export const register = async (req, res) => {
+  console.log("✅ register function is running");
   try {
     const { username, email, password } = req.body;
 
@@ -29,15 +30,13 @@ export const register = async (req, res) => {
 // User Login Controller
 export const login = async (req, res) => {
   try {
-    const { emailOrUsername, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!emailOrUsername || !password) {
+    if (!email || !password) {
       return res.status(400).json({ error: "Both email/username and password are required" });
     }
 
-    const user = await User.findOne({ 
-      $or: [{ email: emailOrUsername }, { username: emailOrUsername }] 
-    });
+    const user = await User.findOne({ email: email });
 
     if (!user) return res.status(400).json({ error: "Invalid credentials (user not found)" });
 
