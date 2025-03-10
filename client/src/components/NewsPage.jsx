@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Heart, ArrowLeft } from "lucide-react";
+import { Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const NewsPage = () => {
@@ -12,6 +12,16 @@ const NewsPage = () => {
     const saved = JSON.parse(localStorage.getItem("savedArticles")) || [];
     setSavedArticles(saved);
   }, []);
+
+  // Retrieve user from sessionStorage
+  const user = JSON.parse(sessionStorage.getItem("user"));
+  
+  // If no user, redirect to login page
+  useEffect(() => {
+    if (!user) {
+      navigate("/login");
+    }
+  }, [user, navigate]);
 
   const fetchArticles = async () => {
     const apiKey = "01008499182045707c100247f657ba5c";
@@ -33,23 +43,39 @@ const NewsPage = () => {
     fetchArticles();
   }, []);
 
-  const handleSaveArticle = (article) => {
-    const existingSavedArticles =
-      JSON.parse(localStorage.getItem("savedArticles")) || [];
-
-    if (!existingSavedArticles.some((saved) => saved.url === article.url)) {
-      const updatedArticles = [...existingSavedArticles, article];
-      setSavedArticles(updatedArticles);
-      localStorage.setItem("savedArticles", JSON.stringify(updatedArticles));
+  const handleSaveArticle = async (article) => {
+    try {
+      const response = await axios.post(
+        import.meta.env.VITE_SAVE_ARTICLE_URL,
+        {
+          userId: user?._id, // Pass the logged-in user's ID
+          article: {
+            title: article.title,
+            url: article.url,
+            image: article.image,
+            publishedAt: article.publishedAt,
+          },
+        }
+      );
+      console.log(response.data.message);
+    } catch (error) {
+      console.error("Error saving article:", error);
     }
   };
 
-  const handleRemoveArticle = (article) => {
-    const updatedSavedArticles = savedArticles.filter(
-      (savedArticle) => savedArticle.url !== article.url
-    );
-    setSavedArticles(updatedSavedArticles);
-    localStorage.setItem("savedArticles", JSON.stringify(updatedSavedArticles));
+  const handleRemoveArticle = async (article) => {
+    try {
+      const response = await axios.post(
+        import.meta.env.VITE_REMOVE_ARTICLE_URL,
+        {
+          userId: user?._id, // Pass the logged-in user's ID
+          articleUrl: article.url,
+        }
+      );
+      console.log(response.data.message);
+    } catch (error) {
+      console.error("Error removing article:", error);
+    }
   };
 
   return (
@@ -103,3 +129,4 @@ const NewsPage = () => {
 };
 
 export default NewsPage;
+

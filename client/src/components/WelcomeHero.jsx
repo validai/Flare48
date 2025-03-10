@@ -39,18 +39,19 @@ const WelcomeHero = () => {
     };
   
  
-    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
-  
+    const REGISTER_URL = import.meta.env.VITE_REGISTER_URL || "http://localhost:3000/api/auth/register";
+    const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "http://localhost:3000/api/auth/login";
+    
     try {
-      const endpoint = isSignup ? "register" : "login";
-      const response = await fetch(`${BACKEND_URL}/auth/${endpoint}`, {
+      const endpoint = isSignup ? REGISTER_URL : LOGIN_URL;
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
-  
+    
       let data;
       try {
         data = await response.json();
@@ -58,10 +59,14 @@ const WelcomeHero = () => {
         console.error("Failed to parse JSON response:", err);
         throw new Error("Invalid response from server");
       }
-  
+    
       if (response.ok) {
         console.log("Success:", data);
-        navigate("/news"); 
+  
+        sessionStorage.setItem("user", JSON.stringify({ _id: data.userId, username: data.username, email: formData.email }));
+        sessionStorage.setItem("token", data.token);
+  
+        navigate("/news");
       } else {
         console.error("Error:", data?.message || "Something went wrong");
       }

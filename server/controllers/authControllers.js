@@ -70,3 +70,45 @@ export const protectedRoute = (req, res) => {
     res.status(500).json({ error: "Failed to access protected route", details: error.message });
   }
 };
+
+export const saveArticle = async (req, res) => {
+  try {
+    const { userId, article } = req.body; 
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    if (user.savedArticles.some((savedArticle) => savedArticle.url === article.url)) {
+      return res.status(400).json({ error: "Article already saved" });
+    }
+
+    user.savedArticles.push(article);
+    await user.save();
+
+    res.status(200).json({ message: "Article saved successfully", savedArticles: user.savedArticles });
+  } catch (error) {
+    console.error("Error saving article:", error);
+    res.status(500).json({ error: "Failed to save article", details: error.message });
+  }
+};
+
+export const removeArticle = async (req, res) => {
+  try {
+    const { userId, articleUrl } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.savedArticles = user.savedArticles.filter((article) => article.url !== articleUrl);
+    await user.save();
+
+    res.status(200).json({ message: "Article removed successfully", savedArticles: user.savedArticles });
+  } catch (error) {
+    console.error("Error removing article:", error);
+    res.status(500).json({ error: "Failed to remove article", details: error.message });
+  }
+};

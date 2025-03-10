@@ -3,25 +3,35 @@
 // The model is used to perform CRUD operations on the User collection
 import mongoose from "mongoose";
 
-// Defines the User collection schema with detailed error messages
-const UserSchema = new mongoose.Schema({
-  username: { 
-    type: String, 
-    required: [true, "Username is required"], 
-    unique: [true, "Username already exists"] 
+const UserSchema = new mongoose.Schema(
+  {
+    username: {
+      type: String,
+      required: [true, "Username is required"],
+      unique: [true, "Username already exists"],
+    },
+    email: {
+      type: String,
+      required: [true, "Email is required"],
+      unique: [true, "Email already exists"],
+      match: [/.+\@.+\..+/, "Invalid email format"],
+    },
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters long"],
+    },
+    savedArticles: [
+      {
+        title: { type: String, required: true },
+        url: { type: String, required: true, unique: true },
+        image: { type: String },
+        publishedAt: { type: Date },
+      },
+    ],
   },
-  email: { 
-    type: String, 
-    required: [true, "Email is required"], 
-    unique: [true, "Email already exists"], 
-    match: [/.+\@.+\..+/, "Invalid email format"] // Ensures a valid email
-  },
-  password: { 
-    type: String, 
-    required: [true, "Password is required"], 
-    minlength: [6, "Password must be at least 6 characters long"] 
-  },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 export default mongoose.model("User", UserSchema);
 // Extra error handling added for debugging and validation purposes

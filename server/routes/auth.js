@@ -1,7 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import passport from "../config/passport.js";
-import { register, login, protectedRoute } from "../controllers/authControllers.js";
+import { register, login, protectedRoute, saveArticle, removeArticle } from "../controllers/authControllers.js";
 
 dotenv.config();
 const router = express.Router();
@@ -21,6 +21,10 @@ router.post("/login", login);
 
 // Protected Route (Moved to Controller)
 router.get("/protected", verifyToken, protectedRoute);
+
+router.post("/saveArticle", saveArticle)
+
+router.post("/removeArticle", removeArticle)
 
 // Middleware to Verify Token
 function verifyToken(req, res, next) {
