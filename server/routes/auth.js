@@ -42,20 +42,28 @@ function verifyToken(req, res, next) {
 // Google OAuth Login Route
 router.get(
   "/google",
+  (req, res, next) => {
+    console.log("Google OAuth Login Attempted");
+    next();
+  },
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
 // Google OAuth Callback Route
 router.get(
   "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/",
-  }),
+  passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    res.redirect(`${process.env.VITE_FRONTEND_URL}`); // Redirect to the frontend home page
+    console.log("Google OAuth Success, Redirecting...");
+    console.log("User Details:", req.user);
+
+    const redirectURL = process.env.VITE_FRONTEND_URL
+      ? `${process.env.VITE_FRONTEND_URL}/dashboard`
+      : "http://localhost:5173/dashboard";
+
+    res.redirect(redirectURL);
   }
 );
-
 
 export default router;
 
