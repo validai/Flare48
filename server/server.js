@@ -50,24 +50,33 @@ if (missingVars.length) {
 // 🔹 Middleware Setup
 console.log("Initializing Middleware...");
 
+// Request timeout middleware
+const timeout = (req, res, next) => {
+  res.setTimeout(30000, () => {
+    console.error('Request timeout');
+    res.status(408).send('Request timeout');
+  });
+  next();
+};
+
+app.use(timeout);
+
 // CORS configuration
 app.use(cors({
-  origin: true, // Allow all origins temporarily for debugging
+  origin: ["https://flare48.onrender.com", "http://localhost:5173"],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-  exposedHeaders: ['Authorization', 'Content-Length', 'X-Requested-With'],
-  maxAge: 86400, // 24 hours in seconds
-  preflightContinue: false,
-  optionsSuccessStatus: 204
+  exposedHeaders: ['Authorization'],
+  maxAge: 86400
 }));
 
 // Enable pre-flight requests for all routes
 app.options('*', cors());
 
-// Parse JSON payloads
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Increase payload limits
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 🔹 Express Session Setup
 app.use(
@@ -75,12 +84,12 @@ app.use(
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    proxy: true, // Required for secure cookies behind a proxy
+    proxy: true,
     cookie: {
       secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: 'none', // Required for cross-site cookies
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      sameSite: 'none',
+      maxAge: 24 * 60 * 60 * 1000
     },
   })
 );
@@ -89,80 +98,88 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// MongoDB Connection with optimized settings
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
     socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    maxIdleTimeMS: 30000,
   })
   .then(async () => {
     console.log("✅ Connected to MongoDB successfully");
     
-    // Drop the problematic index
     try {
       const User = mongoose.model('User');
       await User.collection.dropIndex('savedArticles.url_1');
       console.log("✅ Dropped problematic savedArticles.url index");
     } catch (err) {
-      // Ignore if index doesn't exist
       if (err.code !== 27) {
-        console.warn("Note: savedArticles.url index drop failed (this is okay if it didn't exist):", err.message);
+        console.warn("Note: savedArticles.url index drop failed:", err.message);
       }
     }
 
-    // Start server only after successful DB connection
     app.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
       console.log("📍 Environment:", process.env.NODE_ENV);
-      console.log("🛣️ Loaded Routes:", app._router.stack.filter(r => r.route).map(r => r.route.path));
     });
   })
   .catch((err) => {
     console.error("❌ MongoDB Connection Error:", {
       name: err.name,
       message: err.message,
-      code: err.code,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      code: err.code
     });
     process.exit(1);
   });
 
-// 🔹 Debugging: Log Routes Being Loaded
-console.log("Initializing API & Authentication Routes...");
-
-// 🔹 Root Route
-app.get("/", (_req, res) => {
-  console.log("Root Route Accessed: GET /");
-  res.send("Flare48 Server is Running!");
+// Health check endpoint
+app.get("/health", (req, res) => {
+  res.json({ 
+    status: "healthy",
+    mongo: mongoose.connection.readyState === 1 ? "connected" : "disconnected"
+  });
 });
 
-// 🔹 API & Authentication Routes
-try {
-  app.use("/api", (req, res, next) => {
-    console.log(`API Route Accessed: ${req.method} ${req.originalUrl}`);
-    next();
-  }, apiRoutes);
-  
-  // Log all auth requests
-  app.use("/auth", (req, res, next) => {
-    console.log(`Auth Route Accessed: ${req.method} ${req.originalUrl}`, {
-      headers: req.headers,
-      body: req.body
-    });
-    next();
-  }, authRoutes);
+// API Routes with error handling
+app.use("/api", (req, res, next) => {
+  console.log(`API Request: ${req.method} ${req.originalUrl}`);
+  next();
+}, apiRoutes);
 
-  console.log("API & Auth Routes Initialized");
-} catch (err) {
-  console.error("Error Loading Routes:", err.message);
-}
+app.use("/auth", (req, res, next) => {
+  console.log(`Auth Request: ${req.method} ${req.originalUrl}`, {
+    userId: req.body?.userId || req.params?.userId,
+    hasToken: !!req.headers.authorization
+  });
+  next();
+}, authRoutes);
 
-// 🔹 Route Not Found Handler
+// 404 Handler
 app.use("*", (req, res) => {
-  console.warn(`Route Not Found: ${req.method} ${req.originalUrl}`);
-  res.status(404).json({ error: "Route Not Found", path: req.originalUrl });
+  console.warn(`404: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ 
+    error: "Route Not Found",
+    path: req.originalUrl,
+    method: req.method
+  });
 });
 
-// 🔹 Global Error Handling Middleware
-app.use(errorHandler);
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("Global Error:", {
+    path: req.originalUrl,
+    method: req.method,
+    error: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+  
+  res.status(err.status || 500).json({
+    error: err.message || "Internal Server Error",
+    path: req.originalUrl,
+    method: req.method
+  });
+});

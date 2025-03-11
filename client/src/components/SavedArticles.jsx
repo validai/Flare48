@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,92 +7,158 @@ import axios from "axios";
 const api = axios.create({
   baseURL: 'https://flare48-j45i.onrender.com',
   withCredentials: true,
-  timeout: 15000,
+  timeout: 30000, // Increased timeout
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   }
 });
 
+// Track failed attempts to prevent excessive retries
+let failedAttempts = 0;
+const MAX_FAILED_ATTEMPTS = 3;
+const RETRY_RESET_TIMEOUT = 60000; // 1 minute
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  response => {
+    // Reset failed attempts on successful response
+    failedAttempts = 0;
+    return response;
+  },
+  error => {
+    // Only log errors that aren't due to rate limiting or expected auth issues
+    if (!error.response?.status || (error.response.status !== 429 && error.response.status !== 401 && error.response.status !== 403)) {
+      console.error('API Error:', {
+        url: error.config?.url,
+        status: error.response?.status,
+        message: error.message
+      });
+    }
+    return Promise.reject(error);
+  }
+);
+
 const SavedArticles = () => {
   const [savedArticles, setSavedArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   // Get user from session storage
-  const user = JSON.parse(sessionStorage.getItem("user"));
+  const user = (() => {
+    try {
+      const userData = sessionStorage.getItem("user");
+      if (!userData) return null;
+      return JSON.parse(userData);
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      return null;
+    }
+  })();
   const token = sessionStorage.getItem("token");
 
+  // Check server health
+  const checkServerHealth = useCallback(async () => {
+    try {
+      const response = await api.get('/health');
+      return response.data.status === 'healthy' && response.data.mongo === 'connected';
+    } catch (error) {
+      return false;
+    }
+  }, []);
+
+  const fetchSavedArticles = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Check if we've exceeded retry attempts
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        setError("Too many failed attempts. Please try again later.");
+        setTimeout(() => {
+          failedAttempts = 0;
+          setError(null);
+        }, RETRY_RESET_TIMEOUT);
+        return;
+      }
+
+      // Validate user and token
+      if (!user?._id || !token) {
+        setError("Authentication required. Please log in again.");
+        return;
+      }
+
+      // Check server health first
+      const isHealthy = await checkServerHealth();
+      if (!isHealthy) {
+        failedAttempts++;
+        setError("Server is not responding properly. Please try again later.");
+        return;
+      }
+
+      const response = await api.get(`/auth/saved-articles/${user._id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.data) {
+        throw new Error("No data received from server");
+      }
+
+      setSavedArticles(response.data.savedArticles || []);
+    } catch (error) {
+      failedAttempts++;
+
+      // Only retry on network errors if we haven't exceeded attempts
+      if ((error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') && failedAttempts < MAX_FAILED_ATTEMPTS) {
+        const delay = Math.min(1000 * Math.pow(2, failedAttempts), 10000);
+        setError(`Connection failed. Retrying in ${delay/1000} seconds...`);
+        setTimeout(() => fetchSavedArticles(), delay);
+        return;
+      }
+
+      // Handle authentication errors
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        navigate("/");
+        return;
+      }
+
+      setError(error.response?.data?.error || error.message || "Failed to load saved articles");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, token, navigate, checkServerHealth]);
+
   useEffect(() => {
-    // Redirect if not authenticated
     if (!user || !token) {
       console.log("User not authenticated, redirecting to home");
       navigate("/");
       return;
     }
 
-    const fetchSavedArticles = async () => {
-      try {
-        setIsLoading(true);
-        setError(null); // Reset error state before fetching
-
-        console.log("Fetching saved articles for user:", user._id);
-        console.log("Using token:", token);
-
-        const response = await api.get(`/auth/saved-articles/${user._id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-
-        console.log("Response received:", response);
-
-        if (!response.data) {
-          throw new Error("No data received from server");
-        }
-
-        console.log("Received saved articles:", response.data);
-        setSavedArticles(response.data.savedArticles || []);
-        setRetryCount(0); // Reset retry count on success
-      } catch (err) {
-        console.error("Error fetching saved articles:", {
-          message: err.message,
-          code: err.code,
-          response: err.response,
-          config: err.config
-        });
-        
-        // Handle network errors with retry logic
-        if ((err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED') && retryCount < 3) {
-          console.log(`Retrying fetch (attempt ${retryCount + 1}/3)...`);
-          setRetryCount(prev => prev + 1);
-          setTimeout(() => {
-            fetchSavedArticles();
-          }, 2000 * (retryCount + 1)); // Exponential backoff
-          return;
-        }
-
-        const errorMessage = err.response?.data?.error || err.message || "Failed to load saved articles";
-        setError(errorMessage);
-        
-        // If unauthorized, clear session and redirect
-        if (err.response?.status === 401 || err.response?.status === 403) {
-          sessionStorage.removeItem("user");
-          sessionStorage.removeItem("token");
-          navigate("/");
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchSavedArticles();
-  }, [user, token, navigate, retryCount]);
+  }, [user, token, navigate, fetchSavedArticles]);
 
   const handleRemoveArticle = async (article) => {
     try {
+      // Check if we've exceeded retry attempts
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        alert("Too many failed attempts. Please try again later.");
+        return;
+      }
+
+      // Check server health first
+      const isHealthy = await checkServerHealth();
+      if (!isHealthy) {
+        failedAttempts++;
+        alert("Server is not responding properly. Please try again later.");
+        return;
+      }
+
       await api.post("/auth/removeArticle", {
         userId: user._id,
         articleUrl: article.url
@@ -102,26 +168,20 @@ const SavedArticles = () => {
         }
       });
 
-      // Update local state after successful removal
       setSavedArticles(current => 
         current.filter(savedArticle => savedArticle.url !== article.url)
       );
     } catch (error) {
-      console.error("Error removing article:", {
-        message: error.message,
-        code: error.code,
-        response: error.response
-      });
-      
-      const errorMessage = error.response?.data?.error || error.message || "Failed to remove article";
-      alert(errorMessage);
+      failedAttempts++;
 
-      // If unauthorized, clear session and redirect
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
+        return;
       }
+
+      alert(error.response?.data?.error || error.message || "Failed to remove article");
     }
   };
 
@@ -149,11 +209,6 @@ const SavedArticles = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Loading saved articles...</h2>
           <p className="text-gray-600">Please wait while we fetch your saved articles.</p>
-          {retryCount > 0 && (
-            <p className="text-sm text-gray-500 mt-2">
-              Retrying... Attempt {retryCount}/3
-            </p>
-          )}
         </div>
       </div>
     );

@@ -1,51 +1,145 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+import React, { useState, useEffect, useCallback } from "react";
 import { Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: 'https://flare48-j45i.onrender.com',
+  withCredentials: true,
+  timeout: 30000, // Increased timeout
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+});
+
+// Track failed attempts to prevent excessive retries
+let failedAttempts = 0;
+const MAX_FAILED_ATTEMPTS = 3;
+const RETRY_RESET_TIMEOUT = 60000; // 1 minute
+
+// Add response interceptor for error handling
+api.interceptors.response.use(
+  response => {
+    // Reset failed attempts on successful response
+    failedAttempts = 0;
+    return response;
+  },
+  error => {
+    // Only log errors that aren't due to rate limiting or expected auth issues
+    if (!error.response?.status || (error.response.status !== 429 && error.response.status !== 401 && error.response.status !== 403)) {
+      console.error('API Error:', {
+        url: error.config?.url,
+        status: error.response?.status,
+        message: error.message
+      });
+    }
+    return Promise.reject(error);
+  }
+);
 
 const NewsPage = () => {
   const [articles, setArticles] = useState([]);
   const [savedArticles, setSavedArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   // Get user from session storage
-  const user = JSON.parse(sessionStorage.getItem("user"));
-  const token = sessionStorage.getItem("token");
-  
-  // If no user, redirect to login page
-  useEffect(() => {
-    if (!user || !token) {
-      navigate("/");
-      return;
+  const user = (() => {
+    try {
+      const userData = sessionStorage.getItem("user");
+      if (!userData) return null;
+      return JSON.parse(userData);
+    } catch (error) {
+      console.error("Error parsing user data:", error);
+      return null;
     }
-  }, [user, token, navigate]);
+  })();
+  const token = sessionStorage.getItem("token");
+
+  // Check server health
+  const checkServerHealth = useCallback(async () => {
+    try {
+      const response = await api.get('/health');
+      return response.data.status === 'healthy' && response.data.mongo === 'connected';
+    } catch (error) {
+      console.error('Health check failed:', error);
+      return false;
+    }
+  }, []);
 
   // Fetch saved articles from backend
-  const fetchSavedArticles = async () => {
+  const fetchSavedArticles = useCallback(async () => {
     try {
-      const response = await axios.get(
-        `https://flare48-j45i.onrender.com/auth/saved-articles/${user._id}`,
+      // Check if we've exceeded retry attempts
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        console.log("Maximum retry attempts reached. Waiting before trying again.");
+        setTimeout(() => {
+          failedAttempts = 0;
+        }, RETRY_RESET_TIMEOUT);
+        return;
+      }
+
+      // Validate user and token
+      if (!user?._id || !token) {
+        console.log("Missing user ID or token - skipping fetch");
+        return;
+      }
+
+      // Check server health first
+      const isHealthy = await checkServerHealth();
+      if (!isHealthy) {
+        failedAttempts++;
+        console.log("Server health check failed - attempt", failedAttempts);
+        return;
+      }
+
+      const response = await api.get(
+        `/auth/saved-articles/${user._id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`
           }
         }
       );
+
+      if (!response.data) {
+        throw new Error("No data received from server");
+      }
+
       setSavedArticles(response.data.savedArticles || []);
     } catch (error) {
-      console.error("Error fetching saved articles:", error);
+      failedAttempts++;
+
+      // Only retry on network errors if we haven't exceeded attempts
+      if ((error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') && failedAttempts < MAX_FAILED_ATTEMPTS) {
+        const delay = Math.min(1000 * Math.pow(2, failedAttempts), 10000);
+        console.log(`Retrying in ${delay/1000} seconds... (Attempt ${failedAttempts}/${MAX_FAILED_ATTEMPTS})`);
+        setTimeout(() => fetchSavedArticles(), delay);
+        return;
+      }
+
+      // Handle authentication errors
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
+        return;
       }
-    }
-  };
 
-  const fetchArticles = async () => {
+      // Set empty array for other errors
+      setSavedArticles([]);
+    }
+  }, [user, token, navigate, checkServerHealth]);
+
+  const fetchArticles = useCallback(async () => {
     try {
       setIsLoading(true);
+      setError(null);
+
       // Check if we have cached articles and they're not too old
       const cachedData = localStorage.getItem('cachedArticles');
       if (cachedData) {
@@ -54,6 +148,7 @@ const NewsPage = () => {
         // Use cache if it's less than 15 minutes old
         if (cacheAge < 15 * 60 * 1000) {
           setArticles(cachedArticles);
+          setIsLoading(false);
           return;
         }
       }
@@ -74,6 +169,7 @@ const NewsPage = () => {
       }));
       
       setArticles(response.data.articles);
+      setRetryCount(0);
     } catch (error) {
       console.error("Error fetching news:", error);
       // If we have cached articles, use them as fallback
@@ -81,24 +177,42 @@ const NewsPage = () => {
       if (cachedData) {
         const { articles: cachedArticles } = JSON.parse(cachedData);
         setArticles(cachedArticles);
+      } else {
+        setError("Failed to load articles. Please try again later.");
       }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Fetch both articles and saved articles on mount
   useEffect(() => {
-    if (user && token) {
-      fetchArticles();
-      fetchSavedArticles();
+    if (!user || !token) {
+      navigate("/");
+      return;
     }
-  }, [user, token]);
+    fetchArticles();
+    fetchSavedArticles();
+  }, [user, token, navigate, fetchArticles, fetchSavedArticles]);
 
   const handleSaveArticle = async (article) => {
     try {
-      const response = await axios.post(
-        "https://flare48-j45i.onrender.com/auth/saveArticle",
+      // Check if we've exceeded retry attempts
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        alert("Too many failed attempts. Please try again later.");
+        return;
+      }
+
+      // Check server health first
+      const isHealthy = await checkServerHealth();
+      if (!isHealthy) {
+        failedAttempts++;
+        alert("Server is not responding properly. Please try again later.");
+        return;
+      }
+
+      const response = await api.post(
+        "/auth/saveArticle",
         {
           userId: user._id,
           article: {
@@ -115,28 +229,40 @@ const NewsPage = () => {
         }
       );
       
-      // Update local state with the newly saved article
       setSavedArticles(prev => [...prev, response.data.savedArticle]);
-      
-      // Show success message
       alert("Article saved successfully!");
     } catch (error) {
-      console.error("Error saving article:", error);
-      const errorMessage = error.response?.data?.error || error.message || "Failed to save article";
-      alert(errorMessage);
+      failedAttempts++;
 
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
+        return;
       }
+
+      alert(error.response?.data?.error || error.message || "Failed to save article");
     }
   };
 
   const handleRemoveArticle = async (article) => {
     try {
-      await axios.post(
-        "https://flare48-j45i.onrender.com/auth/removeArticle",
+      // Check if we've exceeded retry attempts
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        alert("Too many failed attempts. Please try again later.");
+        return;
+      }
+
+      // Check server health first
+      const isHealthy = await checkServerHealth();
+      if (!isHealthy) {
+        failedAttempts++;
+        alert("Server is not responding properly. Please try again later.");
+        return;
+      }
+
+      await api.post(
+        "/auth/removeArticle",
         {
           userId: user._id,
           articleUrl: article.url
@@ -148,23 +274,21 @@ const NewsPage = () => {
         }
       );
 
-      // Update local state by removing the article
       setSavedArticles(current => 
         current.filter(savedArticle => savedArticle.url !== article.url)
       );
-      
-      // Show success message
       alert("Article removed successfully!");
     } catch (error) {
-      console.error("Error removing article:", error);
-      const errorMessage = error.response?.data?.error || error.message || "Failed to remove article";
-      alert(errorMessage);
+      failedAttempts++;
 
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
+        return;
       }
+
+      alert(error.response?.data?.error || error.message || "Failed to remove article");
     }
   };
 
@@ -191,6 +315,23 @@ const NewsPage = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Loading news...</h2>
           <p className="text-gray-600">Please wait while we fetch the latest articles.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={() => fetchArticles()}
+            className="mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -230,9 +371,10 @@ const NewsPage = () => {
               </a>
 
               <button
-                onClick={() =>
-                  isSaved ? handleRemoveArticle(article) : handleSaveArticle(article)
-                }
+                onClick={(e) => {
+                  e.preventDefault();
+                  isSaved ? handleRemoveArticle(article) : handleSaveArticle(article);
+                }}
                 className={`absolute bottom-4 right-4 p-2 transition-colors duration-300 hover:scale-110 ease-in-out 
                   ${isSaved ? "text-red-500" : "text-black"}`}
               >
