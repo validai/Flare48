@@ -110,8 +110,21 @@ mongoose
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
   })
-  .then(() => {
+  .then(async () => {
     console.log("✅ Connected to MongoDB successfully");
+    
+    // Drop the problematic index
+    try {
+      const User = mongoose.model('User');
+      await User.collection.dropIndex('savedArticles.url_1');
+      console.log("✅ Dropped problematic savedArticles.url index");
+    } catch (err) {
+      // Ignore if index doesn't exist
+      if (err.code !== 27) {
+        console.warn("Note: savedArticles.url index drop failed (this is okay if it didn't exist):", err.message);
+      }
+    }
+
     // Start server only after successful DB connection
     app.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);

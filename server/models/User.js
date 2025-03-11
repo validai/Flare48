@@ -34,7 +34,7 @@ const UserSchema = new mongoose.Schema(
     savedArticles: [
       {
         title: { type: String, required: true },
-        url: { type: String, required: true},
+        url: { type: String, required: true },
         image: { type: String },
         publishedAt: { type: Date },
       },
@@ -43,7 +43,11 @@ const UserSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("User", UserSchema);
+// Create the model
+const User = mongoose.model("User", UserSchema);
+
+// Export the model
+export default User;
 // Extra error handling added for debugging and validation purposes
 // The timestamps option adds createdAt and updatedAt fields to the schema
 // The model is exported to be used in other parts of the application

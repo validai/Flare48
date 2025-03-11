@@ -1,3 +1,4 @@
+// Error Handler Middleware
 const errorHandler = (err, req, res, next) => {
   // Log error details
   console.error("🔴 Error:", {
@@ -56,4 +57,4 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-module.exports = errorHandler;
+export default errorHandler;
