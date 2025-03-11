@@ -43,7 +43,7 @@ const WelcomeHero = () => {
       username: e.target.username?.value.trim(), 
     };
   
-    const backendUrl = "https://flare48-6c1x.onrender.com";
+    const backendUrl = "https://flare48j451.onrender.com";
     const REGISTER_URL = `${backendUrl}/auth/register`;
     const LOGIN_URL = `${backendUrl}/auth/login`;
     
@@ -91,7 +91,7 @@ const WelcomeHero = () => {
 
   const handleGoogleAuth = () => {
     console.log("Google OAuth button clicked");
-    const backendUrl = "https://flare48-6c1x.onrender.com";
+    const backendUrl = "https://flare48j451.onrender.com";
     window.location.href = `${backendUrl}/auth/google`;
   };
   

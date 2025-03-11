@@ -15,7 +15,7 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !proce
 }
 
 // Dynamically set the callback URL
-const callbackURL = "https://flare48-6c1x.onrender.com/auth/google/callback";
+const callbackURL = "https://flare48j451.onrender.com/auth/google/callback";
 
 
 passport.use(
