@@ -26,10 +26,14 @@ if (!process.env.SESSION_SECRET) {
 // Setup Express Session for Authentication
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "fallback_secret",
+    secret: process.env.SESSION_SECRET, // Store this in your .env file
     resave: false,
     saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === "production" }, // Secure cookies in production
+    cookie: {
+      secure: process.env.NODE_ENV === "production", // Secure cookies in production
+      httpOnly: true, // Prevents client-side JS from accessing cookies
+      sameSite: "none", // Required for cross-site authentication
+    },
   })
 );
 

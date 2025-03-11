@@ -118,74 +118,87 @@ const WelcomeHero = () => {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-          <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full relative">
-            <h2 className="text-2xl font-bold mb-4 text-black">
-              {isSignup ? "Sign Up" : "Login"}
-            </h2>
-            <form onSubmit={handleFormSubmit}>
-              {isSignup && (
-                <div className="mb-4">
-                  <label className="block text-sm font-semibold text-black" htmlFor="username">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    id="username"
-                    className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="Enter your username"
-                    required
-                  />
-                </div>
-              )}
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-black" htmlFor="email">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  placeholder="Enter your email"
-                  required
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-semibold text-black" htmlFor="password">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-                  placeholder="Enter your password"
-                  required
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full py-3 bg-black text-white rounded-lg hover:bg-neutral-800 transition"
-              >
-                {isSignup ? "Sign Up" : "Log In"}
-              </button>
-              <button
-                type="button"
-                className="w-full py-3 mt-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-                onClick={handleGoogleAuth}
-              >
-                Continue with Google
-              </button>
-              <button
-                type="button"
-                className="w-full py-2 mt-4 text-black hover:text-neutral-600 text-sm"
-                onClick={() => setIsModalOpen(false)}
-              >
-                Close
-              </button>
-            </form>
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+    <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full relative">
+      <h2 className="text-2xl font-bold mb-4 text-black">
+        {isSignup ? "Sign Up" : "Login"}
+      </h2>
+
+      <form onSubmit={handleFormSubmit}>
+        {isSignup && (
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-black" htmlFor="username">
+              Username
+            </label>
+            <input
+              type="text"
+              id="username"
+              name="username"
+              className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              placeholder="Enter your username"
+              autoComplete="username"
+              required
+            />
           </div>
+        )}
+
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-black" htmlFor="email">
+            Email
+          </label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            placeholder="Enter your email"
+            autoComplete="email"
+            required
+          />
         </div>
-      )}
+
+        <div className="mb-4">
+          <label className="block text-sm font-semibold text-black" htmlFor="password">
+            Password
+          </label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            required
+          />
+        </div>
+
+        <button
+          type="submit"
+          className="w-full py-3 bg-black text-white rounded-lg hover:bg-neutral-800 transition"
+        >
+          {isSignup ? "Sign Up" : "Log In"}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        className="w-full py-3 mt-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+        onClick={handleGoogleAuth}
+      >
+        Continue with Google
+      </button>
+
+      <button
+        type="button"
+        className="w-full py-2 mt-4 text-black hover:text-neutral-600 text-sm"
+        onClick={() => setIsModalOpen(false)}
+      >
+        Close
+      </button>
+    </div>
+  </div>
+)}
+
     </section>
   );
 };
