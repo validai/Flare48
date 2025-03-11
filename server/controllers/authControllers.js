@@ -162,24 +162,107 @@ export const protectedRoute = (req, res) => {
 
 export const saveArticle = async (req, res) => {
   try {
-    const { userId, article } = req.body; 
+    console.log("📝 Saving article attempt:", {
+      userId: req.body.userId,
+      articleUrl: req.body.article?.url
+    });
 
+    const { userId, article } = req.body;
+
+    // Validate input
+    if (!userId || !article) {
+      console.log("❌ Missing required fields");
+      return res.status(400).json({ 
+        error: "Missing required fields",
+        details: {
+          userId: !userId ? "User ID is required" : null,
+          article: !article ? "Article data is required" : null
+        }
+      });
+    }
+
+    // Validate article data
+    if (!article.title || !article.url) {
+      console.log("❌ Invalid article data");
+      return res.status(400).json({
+        error: "Invalid article data",
+        details: {
+          title: !article.title ? "Article title is required" : null,
+          url: !article.url ? "Article URL is required" : null
+        }
+      });
+    }
+
+    // Find user and check if article already exists
     const user = await User.findById(userId);
     if (!user) {
+      console.log("❌ User not found:", userId);
       return res.status(404).json({ error: "User not found" });
     }
 
-    if (user.savedArticles.some((savedArticle) => savedArticle.url === article.url)) {
+    // Check if article already exists
+    const articleExists = user.savedArticles.some(
+      savedArticle => savedArticle.url === article.url
+    );
+
+    if (articleExists) {
+      console.log("❌ Article already saved:", article.url);
       return res.status(400).json({ error: "Article already saved" });
     }
 
-    user.savedArticles.push(article);
+    // Add savedAt timestamp
+    const articleToSave = {
+      ...article,
+      savedAt: new Date(),
+      publishedAt: article.publishedAt || new Date()
+    };
+
+    // Save article
+    user.savedArticles.push(articleToSave);
     await user.save();
 
-    res.status(200).json({ message: "Article saved successfully", savedArticles: user.savedArticles });
+    console.log("✅ Article saved successfully:", {
+      userId,
+      articleUrl: article.url
+    });
+
+    res.status(200).json({ 
+      message: "Article saved successfully",
+      savedArticle: articleToSave,
+      totalSaved: user.savedArticles.length
+    });
+
   } catch (error) {
-    console.error("Error saving article:", error);
-    res.status(500).json({ error: "Failed to save article", details: error.message });
+    console.error("❌ Error saving article:", {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+
+    // Handle MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        error: "Validation Error",
+        details: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        error: "Duplicate article",
+        message: "This article has already been saved"
+      });
+    }
+
+    res.status(500).json({
+      error: "Failed to save article",
+      message: "An unexpected error occurred while saving the article"
+    });
   }
 };
 

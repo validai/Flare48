@@ -34,14 +34,29 @@ const UserSchema = new mongoose.Schema(
     savedArticles: [
       {
         title: { type: String, required: true },
-        url: { type: String, required: true },
-        image: { type: String },
-        publishedAt: { type: Date },
-      },
+        url: { type: String, required: true, unique: true, sparse: true },
+        image: { type: String, default: null },
+        publishedAt: { type: Date, default: Date.now },
+        savedAt: { type: Date, default: Date.now }
+      }
     ],
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    // Add index for savedArticles.url to prevent duplicates per user
+    indexes: [
+      { 
+        fields: { 'savedArticles.url': 1, '_id': 1 },
+        unique: true,
+        sparse: true,
+        name: 'unique_article_per_user'
+      }
+    ]
+  }
 );
+
+// Create compound index for unique articles per user
+UserSchema.index({ 'savedArticles.url': 1, '_id': 1 }, { unique: true, sparse: true });
 
 // Create the model
 const User = mongoose.model("User", UserSchema);
