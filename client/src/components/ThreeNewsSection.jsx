@@ -6,9 +6,32 @@ const ThreeNewsSection = () => {
   const [articles, setArticles] = useState([]);
   const navigate = useNavigate();
 
+  const handleViewAll = () => {
+    const user = sessionStorage.getItem("user");
+    if (!user) {
+      // If not authenticated, scroll to top where login/signup is
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // You could also add a message or highlight the login button here
+    } else {
+      navigate("/news");
+    }
+  };
+
   useEffect(() => {
     const fetchNews = async () => {
       try {
+        // Check if we have cached preview articles and they're not too old
+        const cachedData = localStorage.getItem('cachedPreviewArticles');
+        if (cachedData) {
+          const { articles: cachedArticles, timestamp } = JSON.parse(cachedData);
+          const cacheAge = Date.now() - timestamp;
+          // Use cache if it's less than 15 minutes old
+          if (cacheAge < 15 * 60 * 1000) {
+            setArticles(cachedArticles);
+            return;
+          }
+        }
+
         const apiKey = "01008499182045707c100247f657ba5c";
         const currentDate = new Date();
         const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
@@ -23,9 +46,21 @@ const ThreeNewsSection = () => {
           .sort(() => 0.5 - Math.random())
           .slice(0, 6);
 
+        // Cache the new preview articles with timestamp
+        localStorage.setItem('cachedPreviewArticles', JSON.stringify({
+          articles: filteredArticles,
+          timestamp: Date.now()
+        }));
+
         setArticles(filteredArticles);
       } catch (error) {
         console.error("Error fetching news:", error);
+        // If we have cached preview articles, use them as fallback
+        const cachedData = localStorage.getItem('cachedPreviewArticles');
+        if (cachedData) {
+          const { articles: cachedArticles } = JSON.parse(cachedData);
+          setArticles(cachedArticles);
+        }
       }
     };
 
@@ -69,10 +104,10 @@ const ThreeNewsSection = () => {
 
       <div className="flex justify-center mt-6">
         <button
-          onClick={() => navigate("/news")}
+          onClick={handleViewAll}
           className="px-6 py-2 bg-black dark:bg-white text-white dark:text-black font-semibold rounded-lg shadow-md hover:shadow-lg transition-transform transform hover:-translate-y-1"
         >
-          View All
+          {sessionStorage.getItem("user") ? "View All" : "Sign in to View All"}
         </button>
       </div>
     </section>

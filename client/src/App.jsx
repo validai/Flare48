@@ -1,18 +1,47 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import Home from "./components/Home";  // Updated to use Home
+import WelcomeHero from "./components/WelcomeHero";
 import NewsPage from "./components/NewsPage";
 import Footer from "./components/Footer";
 import SavedArticles from "./components/SavedArticles";
+import ThreeNewsSection from "./components/ThreeNewsSection";
 
 function App() {
+  // Check if user is authenticated
+  const isAuthenticated = () => {
+    const user = sessionStorage.getItem("user");
+    return !!user;
+  };
+
+  // Protected Route wrapper component
+  const ProtectedRoute = ({ children }) => {
+    if (!isAuthenticated()) {
+      return <Navigate to="/" />;
+    }
+    return children;
+  };
+
   return (
     <>
       <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />   {/* Home is now the main page */}
-        <Route path="/news" element={<NewsPage />} />
-        <Route path="/saved-articles" element={<SavedArticles />} />
+        <Route path="/" element={
+          <>
+            <WelcomeHero />
+            <ThreeNewsSection />
+          </>
+        } />
+        <Route path="/news" element={
+          <ProtectedRoute>
+            <NewsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/saved-articles" element={
+          <ProtectedRoute>
+            <SavedArticles />
+          </ProtectedRoute>
+        } />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Footer />
     </>

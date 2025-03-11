@@ -30,12 +30,37 @@ const NewsPage = () => {
     const formattedDate = pastDate.toISOString();
 
     try {
+      // Check if we have cached articles and they're not too old
+      const cachedData = localStorage.getItem('cachedArticles');
+      if (cachedData) {
+        const { articles: cachedArticles, timestamp } = JSON.parse(cachedData);
+        const cacheAge = Date.now() - timestamp;
+        // Use cache if it's less than 15 minutes old
+        if (cacheAge < 15 * 60 * 1000) {
+          setArticles(cachedArticles);
+          return;
+        }
+      }
+
       const response = await axios.get(
         `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`
       );
+      
+      // Cache the new articles with timestamp
+      localStorage.setItem('cachedArticles', JSON.stringify({
+        articles: response.data.articles,
+        timestamp: Date.now()
+      }));
+      
       setArticles(response.data.articles);
     } catch (error) {
       console.error("Error fetching news:", error);
+      // If we have cached articles, use them as fallback
+      const cachedData = localStorage.getItem('cachedArticles');
+      if (cachedData) {
+        const { articles: cachedArticles } = JSON.parse(cachedData);
+        setArticles(cachedArticles);
+      }
     }
   };
 
