@@ -82,174 +82,71 @@ const SavedArticles = () => {
   // Get user data using the new function
   const { user, token } = getUserData();
 
-  // Check server health
-  const checkServerHealth = useCallback(async () => {
-    // Don't check health if circuit is open
-    if (isCircuitOpen) {
-      return false;
-    }
-
-    // Implement rate limiting for health checks
-    const now = Date.now();
-    if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
-      return !isCircuitOpen; // Return last known state
-    }
-
-    try {
-      lastHealthCheck = now;
-      const response = await api.get('/health');
-      const isHealthy = response.data.status === 'healthy' && response.data.mongo === 'connected';
-      
-      if (!isHealthy) {
-        isCircuitOpen = true;
-        setTimeout(() => {
-          isCircuitOpen = false;
-        }, CIRCUIT_RESET_TIMEOUT);
-      }
-      
-      return isHealthy;
-    } catch (error) {
-      isCircuitOpen = true;
-      setTimeout(() => {
-        isCircuitOpen = false;
-      }, CIRCUIT_RESET_TIMEOUT);
-      return false;
-    }
-  }, []);
-
   const fetchSavedArticles = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-
-      // Check if we've exceeded retry attempts
-      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-        setError("Too many failed attempts. Please try again later.");
-        setTimeout(() => {
-          failedAttempts = 0;
-          isCircuitOpen = false; // Reset circuit breaker
-          setError(null);
-        }, RETRY_RESET_TIMEOUT);
-        return;
-      }
-
-      // Enhanced validation for user and token
-      if (!user?._id) {
-        setError("Invalid user data. Please log in again.");
-        sessionStorage.removeItem("user");
-        sessionStorage.removeItem("token");
-        setTimeout(() => navigate("/"), 2000);
-        return;
-      }
-      
-      if (!token) {
-        setError("Authentication required. Please log in again.");
-        sessionStorage.removeItem("user");
-        sessionStorage.removeItem("token");
-        setTimeout(() => navigate("/"), 2000);
-        return;
-      }
-
-      // Check server health first
-      const isHealthy = await checkServerHealth();
-      if (!isHealthy) {
-        failedAttempts++;
-        setError(isCircuitOpen ? "Server is temporarily unavailable. Please try again later." : "Server is not responding properly. Please try again later.");
+      if (!user?._id || !token) {
+        navigate("/");
         return;
       }
 
       const response = await api.get(`/auth/saved-articles/${user._id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        timeout: 5000 // 5 second timeout
       });
 
-      if (!response?.data?.savedArticles) {
-        throw new Error("Invalid response format from server");
+      if (response?.data?.savedArticles) {
+        setSavedArticles(response.data.savedArticles);
       }
-
-      setSavedArticles(response.data.savedArticles);
     } catch (error) {
-      failedAttempts++;
-
-      if (error.message === "Invalid response format from server") {
-        setError("Unexpected server response. Please try again.");
-        setSavedArticles([]);
-        return;
-      }
-
-      // Only retry on network errors if we haven't exceeded attempts
-      if ((error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') && failedAttempts < MAX_FAILED_ATTEMPTS) {
-        const delay = Math.min(1000 * Math.pow(2, failedAttempts), 10000);
-        setError(`Connection failed. Retrying in ${delay/1000} seconds...`);
-        setTimeout(() => fetchSavedArticles(), delay);
-        return;
-      }
-
-      // Handle authentication errors
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        sessionStorage.removeItem("user");
-        sessionStorage.removeItem("token");
-        setError("Authentication expired. Redirecting to login...");
-        setTimeout(() => navigate("/"), 2000);
-        return;
-      }
-
-      setError(error.response?.data?.error || error.message || "Failed to load saved articles");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, token, navigate, checkServerHealth]);
-
-  useEffect(() => {
-    if (!user || !token) {
-      console.log("User not authenticated, redirecting to home");
-      navigate("/");
-      return;
-    }
-
-    fetchSavedArticles();
-  }, [user, token, navigate, fetchSavedArticles]);
-
-  const handleRemoveArticle = async (article) => {
-    try {
-      // Check if we've exceeded retry attempts
-      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-        alert("Too many failed attempts. Please try again later.");
-        return;
-      }
-
-      // Check server health first
-      const isHealthy = await checkServerHealth();
-      if (!isHealthy) {
-        failedAttempts++;
-        alert("Server is not responding properly. Please try again later.");
-        return;
-      }
-
-      await api.post("/auth/removeArticle", {
-        userId: user._id,
-        articleUrl: article.url
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      setSavedArticles(current => 
-        current.filter(savedArticle => savedArticle.url !== article.url)
-      );
-    } catch (error) {
-      failedAttempts++;
-
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
         return;
       }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user, token, navigate]);
 
-      alert(error.response?.data?.error || error.message || "Failed to remove article");
+  useEffect(() => {
+    if (!user || !token) {
+      navigate("/");
+      return;
+    }
+
+    // Initial fetch
+    fetchSavedArticles();
+
+    // Set up periodic refresh
+    const refreshInterval = setInterval(fetchSavedArticles, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [user, token, navigate, fetchSavedArticles]);
+
+  const handleRemoveArticle = async (article) => {
+    try {
+      await api.post("/auth/removeArticle", {
+        userId: user._id,
+        articleUrl: article.url
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        timeout: 5000 // 5 second timeout
+      });
+
+      setSavedArticles(current => 
+        current.filter(savedArticle => savedArticle.url !== article.url)
+      );
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        navigate("/");
+      }
     }
   };
 

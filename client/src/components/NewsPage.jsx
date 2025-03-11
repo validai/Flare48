@@ -78,7 +78,6 @@ const NewsPage = () => {
   const [savedArticles, setSavedArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   // Get user data using the new function
@@ -194,48 +193,53 @@ const NewsPage = () => {
 
   const fetchArticles = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-
-      // Check if we have cached articles and they're not too old
+      // Always check cache first
       const cachedData = localStorage.getItem('cachedArticles');
       if (cachedData) {
         const { articles: cachedArticles, timestamp } = JSON.parse(cachedData);
         const cacheAge = Date.now() - timestamp;
-        // Use cache if it's less than 15 minutes old
-        if (cacheAge < 15 * 60 * 1000) {
+        
+        // Use cache if it's less than 30 minutes old
+        if (cacheAge < 30 * 60 * 1000) {
           setArticles(cachedArticles);
           setIsLoading(false);
           return;
         }
       }
 
+      // If we get here, we need to fetch new articles
+      setIsLoading(true);
+
       const apiKey = "01008499182045707c100247f657ba5c";
       const currentDate = new Date();
       const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
       const formattedDate = pastDate.toISOString();
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
       const response = await axios.get(
-        `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`
+        `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`,
+        { signal: controller.signal }
       );
+
+      clearTimeout(timeoutId);
       
-      // Cache the new articles with timestamp
-      localStorage.setItem('cachedArticles', JSON.stringify({
-        articles: response.data.articles,
-        timestamp: Date.now()
-      }));
-      
-      setArticles(response.data.articles);
-      setRetryCount(0);
+      if (response?.data?.articles) {
+        // Cache the new articles with timestamp
+        localStorage.setItem('cachedArticles', JSON.stringify({
+          articles: response.data.articles,
+          timestamp: Date.now()
+        }));
+        
+        setArticles(response.data.articles);
+      }
     } catch (error) {
-      console.error("Error fetching news:", error);
-      // If we have cached articles, use them as fallback
+      // If we have cached articles, use them as fallback silently
       const cachedData = localStorage.getItem('cachedArticles');
       if (cachedData) {
         const { articles: cachedArticles } = JSON.parse(cachedData);
         setArticles(cachedArticles);
-      } else {
-        setError("Failed to load articles. Please try again later.");
       }
     } finally {
       setIsLoading(false);
@@ -248,8 +252,22 @@ const NewsPage = () => {
       navigate("/");
       return;
     }
+
+    // Fetch articles immediately
     fetchArticles();
-    fetchSavedArticles();
+
+    // Set up interval for periodic updates
+    const articleInterval = setInterval(fetchArticles, 5 * 60 * 1000); // Refresh every 5 minutes
+
+    // Fetch saved articles with a slight delay to prevent resource contention
+    const savedArticlesTimeout = setTimeout(() => {
+      fetchSavedArticles();
+    }, 1000);
+
+    return () => {
+      clearInterval(articleInterval);
+      clearTimeout(savedArticlesTimeout);
+    };
   }, [user, token, navigate, fetchArticles, fetchSavedArticles]);
 
   const handleSaveArticle = async (article) => {
