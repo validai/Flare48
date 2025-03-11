@@ -28,18 +28,16 @@ const RETRY_RESET_TIMEOUT = 60000; // 1 minute
 // Add response interceptor for error handling
 api.interceptors.response.use(
   response => {
-    // Reset failed attempts and circuit breaker on successful response
     failedAttempts = 0;
     isCircuitOpen = false;
     return response;
   },
   error => {
-    // Only log errors that aren't due to rate limiting or expected auth issues
-    if (!error.response?.status || (error.response.status !== 429 && error.response.status !== 401 && error.response.status !== 403)) {
+    // Only log unexpected server errors or network issues
+    if (error.code === 'ERR_NETWORK' || (error.response?.status && error.response.status >= 500)) {
       console.error('API Error:', {
-        url: error.config?.url,
-        status: error.response?.status,
-        message: error.message
+        type: error.code || error.response?.status,
+        url: error.config?.url?.split('?')[0] // Log URL without query params
       });
     }
     return Promise.reject(error);
@@ -74,10 +72,12 @@ const getUserData = () => {
 };
 
 const NewsPage = () => {
-  const [articles, setArticles] = useState([]);
-  const [savedArticles, setSavedArticles] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [state, setState] = useState({
+    articles: [],
+    savedArticles: [],
+    isLoading: true,
+    error: null
+  });
   const navigate = useNavigate();
 
   // Get user data using the new function
@@ -118,79 +118,6 @@ const NewsPage = () => {
     }
   }, []);
 
-  // Fetch saved articles from backend
-  const fetchSavedArticles = useCallback(async () => {
-    try {
-      // Check if we've exceeded retry attempts
-      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-        setTimeout(() => {
-          failedAttempts = 0;
-          isCircuitOpen = false; // Reset circuit breaker
-        }, RETRY_RESET_TIMEOUT);
-        return;
-      }
-
-      // Enhanced validation for user and token
-      if (!user?._id) {
-        console.error("Missing or invalid user ID");
-        return;
-      }
-      
-      if (!token) {
-        console.error("Missing authentication token");
-        return;
-      }
-
-      // Check server health first
-      const isHealthy = await checkServerHealth();
-      if (!isHealthy) {
-        failedAttempts++;
-        return;
-      }
-
-      const response = await api.get(
-        `/auth/saved-articles/${user._id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      if (!response?.data?.savedArticles) {
-        throw new Error("Invalid response format from server");
-      }
-
-      setSavedArticles(response.data.savedArticles);
-    } catch (error) {
-      failedAttempts++;
-
-      if (error.message === "Invalid response format from server") {
-        console.error("Server response validation failed:", error);
-        setSavedArticles([]);
-        return;
-      }
-
-      // Only retry on network errors if we haven't exceeded attempts
-      if ((error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') && failedAttempts < MAX_FAILED_ATTEMPTS) {
-        const delay = Math.min(1000 * Math.pow(2, failedAttempts), 10000);
-        setTimeout(() => fetchSavedArticles(), delay);
-        return;
-      }
-
-      // Handle authentication errors
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        sessionStorage.removeItem("user");
-        sessionStorage.removeItem("token");
-        navigate("/");
-        return;
-      }
-
-      // Set empty array for other errors
-      setSavedArticles([]);
-    }
-  }, [user, token, navigate, checkServerHealth]);
-
   const fetchArticles = useCallback(async () => {
     try {
       // Always check cache first
@@ -201,29 +128,20 @@ const NewsPage = () => {
         
         // Use cache if it's less than 30 minutes old
         if (cacheAge < 30 * 60 * 1000) {
-          setArticles(cachedArticles);
-          setIsLoading(false);
+          setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
           return;
         }
       }
-
-      // If we get here, we need to fetch new articles
-      setIsLoading(true);
 
       const apiKey = "01008499182045707c100247f657ba5c";
       const currentDate = new Date();
       const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
       const formattedDate = pastDate.toISOString();
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-
       const response = await axios.get(
         `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`,
-        { signal: controller.signal }
+        { timeout: 10000 }
       );
-
-      clearTimeout(timeoutId);
       
       if (response?.data?.articles) {
         // Cache the new articles with timestamp
@@ -232,60 +150,77 @@ const NewsPage = () => {
           timestamp: Date.now()
         }));
         
-        setArticles(response.data.articles);
+        setState(prev => ({ ...prev, articles: response.data.articles, isLoading: false }));
       }
     } catch (error) {
       // If we have cached articles, use them as fallback silently
       const cachedData = localStorage.getItem('cachedArticles');
       if (cachedData) {
         const { articles: cachedArticles } = JSON.parse(cachedData);
-        setArticles(cachedArticles);
+        setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
+      } else {
+        setState(prev => ({ ...prev, isLoading: false }));
       }
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
-  // Fetch both articles and saved articles on mount
+  const fetchSavedArticles = useCallback(async () => {
+    if (!user?._id || !token) return;
+
+    try {
+      const response = await api.get(
+        `/auth/saved-articles/${user._id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 5000
+        }
+      );
+
+      if (response?.data?.savedArticles) {
+        setState(prev => ({ ...prev, savedArticles: response.data.savedArticles }));
+      }
+    } catch (error) {
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        navigate("/");
+      }
+    }
+  }, [user, token, navigate]);
+
   useEffect(() => {
     if (!user || !token) {
       navigate("/");
       return;
     }
 
-    // Fetch articles immediately
-    fetchArticles();
+    // Load cached articles immediately if available
+    const cachedData = localStorage.getItem('cachedArticles');
+    if (cachedData) {
+      const { articles: cachedArticles } = JSON.parse(cachedData);
+      setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
+    }
 
-    // Set up interval for periodic updates
-    const articleInterval = setInterval(fetchArticles, 5 * 60 * 1000); // Refresh every 5 minutes
+    // Fetch fresh data
+    Promise.all([
+      fetchArticles(),
+      fetchSavedArticles()
+    ]).finally(() => {
+      setState(prev => ({ ...prev, isLoading: false }));
+    });
 
-    // Fetch saved articles with a slight delay to prevent resource contention
-    const savedArticlesTimeout = setTimeout(() => {
-      fetchSavedArticles();
-    }, 1000);
+    // Set up refresh intervals
+    const articlesInterval = setInterval(fetchArticles, 5 * 60 * 1000);
+    const savedArticlesInterval = setInterval(fetchSavedArticles, 30 * 1000);
 
     return () => {
-      clearInterval(articleInterval);
-      clearTimeout(savedArticlesTimeout);
+      clearInterval(articlesInterval);
+      clearInterval(savedArticlesInterval);
     };
   }, [user, token, navigate, fetchArticles, fetchSavedArticles]);
 
   const handleSaveArticle = async (article) => {
     try {
-      // Check if we've exceeded retry attempts
-      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-        alert("Too many failed attempts. Please try again later.");
-        return;
-      }
-
-      // Check server health first
-      const isHealthy = await checkServerHealth();
-      if (!isHealthy) {
-        failedAttempts++;
-        alert("Server is not responding properly. Please try again later.");
-        return;
-      }
-
       const response = await api.post(
         "/auth/saveArticle",
         {
@@ -298,44 +233,28 @@ const NewsPage = () => {
           },
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 5000
         }
       );
       
-      setSavedArticles(prev => [...prev, response.data.savedArticle]);
-      alert("Article saved successfully!");
+      if (response?.data?.savedArticle) {
+        setState(prev => ({
+          ...prev,
+          savedArticles: [...prev.savedArticles, response.data.savedArticle]
+        }));
+      }
     } catch (error) {
-      failedAttempts++;
-
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
-        return;
       }
-
-      alert(error.response?.data?.error || error.message || "Failed to save article");
     }
   };
 
   const handleRemoveArticle = async (article) => {
     try {
-      // Check if we've exceeded retry attempts
-      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-        alert("Too many failed attempts. Please try again later.");
-        return;
-      }
-
-      // Check server health first
-      const isHealthy = await checkServerHealth();
-      if (!isHealthy) {
-        failedAttempts++;
-        alert("Server is not responding properly. Please try again later.");
-        return;
-      }
-
       await api.post(
         "/auth/removeArticle",
         {
@@ -343,27 +262,21 @@ const NewsPage = () => {
           articleUrl: article.url
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` },
+          timeout: 5000
         }
       );
 
-      setSavedArticles(current => 
-        current.filter(savedArticle => savedArticle.url !== article.url)
-      );
-      alert("Article removed successfully!");
+      setState(prev => ({
+        ...prev,
+        savedArticles: prev.savedArticles.filter(savedArticle => savedArticle.url !== article.url)
+      }));
     } catch (error) {
-      failedAttempts++;
-
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
-        return;
       }
-
-      alert(error.response?.data?.error || error.message || "Failed to remove article");
     }
   };
 
@@ -384,7 +297,9 @@ const NewsPage = () => {
     );
   }
 
-  if (isLoading) {
+  const { articles, savedArticles, isLoading, error } = state;
+
+  if (isLoading && articles.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
