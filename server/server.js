@@ -23,26 +23,6 @@ if (!process.env.SESSION_SECRET) {
   console.log("✅ SESSION_SECRET Loaded:", process.env.SESSION_SECRET);
 }
 
-// Setup Express Session for Authentication
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET, // Store this in your .env file
-    resave: false,
-    saveUninitialized: true,
-    cookie: {
-      secure: process.env.NODE_ENV === "production", // Secure cookies in production
-      httpOnly: true, // Prevents client-side JS from accessing cookies
-      sameSite: "none", // Required for cross-site authentication
-    },
-  })
-);
-
-
-console.log("Express Session Initialized with Secure Secret");
-
-
-// 🔹 Debug: Check if .env file is loaded properly
-console.log("Checking .env File...");
 const requiredEnvVars = [
   "MONGO_URI",
   "JWT_SECRET",
@@ -69,39 +49,45 @@ if (missingVars.length) {
 
 // 🔹 Middleware Setup
 console.log("Initializing Middleware...");
-app.use(cors({ 
-  origin: "https://flare48.onrender.com",
+
+// CORS configuration
+app.use(cors({
+  origin: true, // Allow all origins temporarily for debugging
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Authorization'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Authorization', 'Content-Length', 'X-Requested-With'],
+  maxAge: 86400, // 24 hours in seconds
   preflightContinue: false,
   optionsSuccessStatus: 204
 }));
-console.log("CORS Enabled");
 
+// Enable pre-flight requests for all routes
+app.options('*', cors());
+
+// Parse JSON payloads
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-console.log("JSON Middleware Enabled");
 
-// 🔹 Express Session Setup for Passport
+// 🔹 Express Session Setup
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "default_secret",
+    secret: process.env.SESSION_SECRET,
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: process.env.NODE_ENV === "production" },
+    saveUninitialized: false,
+    proxy: true, // Required for secure cookies behind a proxy
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: 'none', // Required for cross-site cookies
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    },
   })
 );
 
 // 🔹 Initialize Passport.js
 app.use(passport.initialize());
 app.use(passport.session());
-console.log("Passport.js Initialized");
-
-// 🔹 MongoDB Connection
-console.log("Attempting to connect to MongoDB...");
-console.log("MongoDB URI:", process.env.MONGO_URI ? "URI is set" : "URI is missing");
 
 mongoose
   .connect(process.env.MONGO_URI, {
@@ -157,10 +143,13 @@ try {
     console.log(`API Route Accessed: ${req.method} ${req.originalUrl}`);
     next();
   }, apiRoutes);
-  app.use("/auth", authRoutes);
-
-  app.use("/api/auth", (req, res, next) => {
-    console.log(`Auth Route Accessed: ${req.method} ${req.originalUrl}`);
+  
+  // Log all auth requests
+  app.use("/auth", (req, res, next) => {
+    console.log(`Auth Route Accessed: ${req.method} ${req.originalUrl}`, {
+      headers: req.headers,
+      body: req.body
+    });
     next();
   }, authRoutes);
 

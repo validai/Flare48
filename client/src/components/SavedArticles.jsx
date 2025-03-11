@@ -3,10 +3,22 @@ import { ArrowLeft, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: 'https://flare48-j45i.onrender.com',
+  withCredentials: true,
+  timeout: 15000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+});
+
 const SavedArticles = () => {
   const [savedArticles, setSavedArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
   // Get user from session storage
@@ -27,14 +39,15 @@ const SavedArticles = () => {
         setError(null); // Reset error state before fetching
 
         console.log("Fetching saved articles for user:", user._id);
-        const response = await axios.get(
-          `https://flare48-j45i.onrender.com/auth/saved-articles/${user._id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
+        console.log("Using token:", token);
+
+        const response = await api.get(`/auth/saved-articles/${user._id}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
           }
-        );
+        });
+
+        console.log("Response received:", response);
 
         if (!response.data) {
           throw new Error("No data received from server");
@@ -42,8 +55,25 @@ const SavedArticles = () => {
 
         console.log("Received saved articles:", response.data);
         setSavedArticles(response.data.savedArticles || []);
+        setRetryCount(0); // Reset retry count on success
       } catch (err) {
-        console.error("Error fetching saved articles:", err);
+        console.error("Error fetching saved articles:", {
+          message: err.message,
+          code: err.code,
+          response: err.response,
+          config: err.config
+        });
+        
+        // Handle network errors with retry logic
+        if ((err.code === 'ERR_NETWORK' || err.code === 'ECONNABORTED') && retryCount < 3) {
+          console.log(`Retrying fetch (attempt ${retryCount + 1}/3)...`);
+          setRetryCount(prev => prev + 1);
+          setTimeout(() => {
+            fetchSavedArticles();
+          }, 2000 * (retryCount + 1)); // Exponential backoff
+          return;
+        }
+
         const errorMessage = err.response?.data?.error || err.message || "Failed to load saved articles";
         setError(errorMessage);
         
@@ -59,29 +89,30 @@ const SavedArticles = () => {
     };
 
     fetchSavedArticles();
-  }, [user, token, navigate]);
+  }, [user, token, navigate, retryCount]);
 
   const handleRemoveArticle = async (article) => {
     try {
-      await axios.post(
-        "https://flare48-j45i.onrender.com/auth/removeArticle",
-        {
-          userId: user._id,
-          articleUrl: article.url
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+      await api.post("/auth/removeArticle", {
+        userId: user._id,
+        articleUrl: article.url
+      }, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      );
+      });
 
       // Update local state after successful removal
       setSavedArticles(current => 
         current.filter(savedArticle => savedArticle.url !== article.url)
       );
     } catch (error) {
-      console.error("Error removing article:", error);
+      console.error("Error removing article:", {
+        message: error.message,
+        code: error.code,
+        response: error.response
+      });
+      
       const errorMessage = error.response?.data?.error || error.message || "Failed to remove article";
       alert(errorMessage);
 
@@ -118,6 +149,11 @@ const SavedArticles = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Loading saved articles...</h2>
           <p className="text-gray-600">Please wait while we fetch your saved articles.</p>
+          {retryCount > 0 && (
+            <p className="text-sm text-gray-500 mt-2">
+              Retrying... Attempt {retryCount}/3
+            </p>
+          )}
         </div>
       </div>
     );
@@ -129,12 +165,20 @@ const SavedArticles = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4 text-red-600">Error</h2>
           <p className="text-gray-600">{error}</p>
-          <button
-            onClick={() => navigate("/news")}
-            className="mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-          >
-            Back to News
-          </button>
+          <div className="mt-4 space-y-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 w-full"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate("/news")}
+              className="px-4 py-2 border border-black text-black rounded-lg hover:bg-gray-100 w-full"
+            >
+              Back to News
+            </button>
+          </div>
         </div>
       </div>
     );
