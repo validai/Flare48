@@ -14,6 +14,12 @@ const api = axios.create({
   }
 });
 
+// Circuit breaker state
+let isCircuitOpen = false;
+let lastHealthCheck = 0;
+const HEALTH_CHECK_INTERVAL = 10000; // 10 seconds
+const CIRCUIT_RESET_TIMEOUT = 30000; // 30 seconds
+
 // Track failed attempts to prevent excessive retries
 let failedAttempts = 0;
 const MAX_FAILED_ATTEMPTS = 3;
@@ -22,8 +28,9 @@ const RETRY_RESET_TIMEOUT = 60000; // 1 minute
 // Add response interceptor for error handling
 api.interceptors.response.use(
   response => {
-    // Reset failed attempts on successful response
+    // Reset failed attempts and circuit breaker on successful response
     failedAttempts = 0;
+    isCircuitOpen = false;
     return response;
   },
   error => {
@@ -39,6 +46,33 @@ api.interceptors.response.use(
   }
 );
 
+// Get user from session storage
+const getUserData = () => {
+  try {
+    const userData = sessionStorage.getItem("user");
+    const token = sessionStorage.getItem("token");
+    
+    if (!userData || !token) {
+      return { user: null, token: null };
+    }
+
+    const parsedUser = JSON.parse(userData);
+    if (!parsedUser?._id) {
+      console.error("Invalid user data in session storage");
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      return { user: null, token: null };
+    }
+
+    return { user: parsedUser, token };
+  } catch (error) {
+    console.error("Error parsing user data:", error);
+    sessionStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    return { user: null, token: null };
+  }
+};
+
 const NewsPage = () => {
   const [articles, setArticles] = useState([]);
   const [savedArticles, setSavedArticles] = useState([]);
@@ -47,26 +81,40 @@ const NewsPage = () => {
   const [retryCount, setRetryCount] = useState(0);
   const navigate = useNavigate();
 
-  // Get user from session storage
-  const user = (() => {
-    try {
-      const userData = sessionStorage.getItem("user");
-      if (!userData) return null;
-      return JSON.parse(userData);
-    } catch (error) {
-      console.error("Error parsing user data:", error);
-      return null;
-    }
-  })();
-  const token = sessionStorage.getItem("token");
+  // Get user data using the new function
+  const { user, token } = getUserData();
 
   // Check server health
   const checkServerHealth = useCallback(async () => {
+    // Don't check health if circuit is open
+    if (isCircuitOpen) {
+      return false;
+    }
+
+    // Implement rate limiting for health checks
+    const now = Date.now();
+    if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
+      return !isCircuitOpen; // Return last known state
+    }
+
     try {
+      lastHealthCheck = now;
       const response = await api.get('/health');
-      return response.data.status === 'healthy' && response.data.mongo === 'connected';
+      const isHealthy = response.data.status === 'healthy' && response.data.mongo === 'connected';
+      
+      if (!isHealthy) {
+        isCircuitOpen = true;
+        setTimeout(() => {
+          isCircuitOpen = false;
+        }, CIRCUIT_RESET_TIMEOUT);
+      }
+      
+      return isHealthy;
     } catch (error) {
-      console.error('Health check failed:', error);
+      isCircuitOpen = true;
+      setTimeout(() => {
+        isCircuitOpen = false;
+      }, CIRCUIT_RESET_TIMEOUT);
       return false;
     }
   }, []);
@@ -76,16 +124,21 @@ const NewsPage = () => {
     try {
       // Check if we've exceeded retry attempts
       if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-        console.log("Maximum retry attempts reached. Waiting before trying again.");
         setTimeout(() => {
           failedAttempts = 0;
+          isCircuitOpen = false; // Reset circuit breaker
         }, RETRY_RESET_TIMEOUT);
         return;
       }
 
-      // Validate user and token
-      if (!user?._id || !token) {
-        console.log("Missing user ID or token - skipping fetch");
+      // Enhanced validation for user and token
+      if (!user?._id) {
+        console.error("Missing or invalid user ID");
+        return;
+      }
+      
+      if (!token) {
+        console.error("Missing authentication token");
         return;
       }
 
@@ -93,7 +146,6 @@ const NewsPage = () => {
       const isHealthy = await checkServerHealth();
       if (!isHealthy) {
         failedAttempts++;
-        console.log("Server health check failed - attempt", failedAttempts);
         return;
       }
 
@@ -106,18 +158,23 @@ const NewsPage = () => {
         }
       );
 
-      if (!response.data) {
-        throw new Error("No data received from server");
+      if (!response?.data?.savedArticles) {
+        throw new Error("Invalid response format from server");
       }
 
-      setSavedArticles(response.data.savedArticles || []);
+      setSavedArticles(response.data.savedArticles);
     } catch (error) {
       failedAttempts++;
+
+      if (error.message === "Invalid response format from server") {
+        console.error("Server response validation failed:", error);
+        setSavedArticles([]);
+        return;
+      }
 
       // Only retry on network errors if we haven't exceeded attempts
       if ((error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') && failedAttempts < MAX_FAILED_ATTEMPTS) {
         const delay = Math.min(1000 * Math.pow(2, failedAttempts), 10000);
-        console.log(`Retrying in ${delay/1000} seconds... (Attempt ${failedAttempts}/${MAX_FAILED_ATTEMPTS})`);
         setTimeout(() => fetchSavedArticles(), delay);
         return;
       }
