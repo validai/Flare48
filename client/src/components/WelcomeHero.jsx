@@ -43,9 +43,9 @@ const WelcomeHero = () => {
       username: e.target.username?.value.trim(), 
     };
   
-    const backendUrl = "https://flare48-2sfl.onrender.com";
-    const REGISTER_URL = `${backendUrl}/api/auth/register`;
-    const LOGIN_URL = `${backendUrl}/api/auth/login`;
+    const backendUrl = "https://flare48-6c1x.onrender.com";
+    const REGISTER_URL = `${backendUrl}/auth/register`;
+    const LOGIN_URL = `${backendUrl}/auth/login`;
     
     try {
       const endpoint = isSignup ? REGISTER_URL : LOGIN_URL;
@@ -91,8 +91,8 @@ const WelcomeHero = () => {
 
   const handleGoogleAuth = () => {
     console.log("Google OAuth button clicked");
-    const backendUrl = "https://flare48-2sfl.onrender.com";
-    window.location.href = `${backendUrl}/api/auth/google`;
+    const backendUrl = "https://flare48-6c1x.onrender.com";
+    window.location.href = `${backendUrl}/auth/google`;
   };
   
 
