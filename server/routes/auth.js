@@ -51,27 +51,37 @@ router.get("/google", passport.authenticate("google", {
 // Google OAuth Callback Route
 router.get(
   "/google/callback",
-  passport.authenticate("google", { failureRedirect: "/" }),
+  (req, res, next) => {
+    console.log("Received Google callback with query:", req.query);
+    next();
+  },
+  passport.authenticate("google", { 
+    failureRedirect: "https://flare48.onrender.com/?error=auth_failed",
+    session: false 
+  }),
   (req, res) => {
     try {
-      if (!req.user) {
-        console.error("Authentication Failed: No user data received");
-        return res.redirect("https://flare48.onrender.com?error=auth_failed");
+      console.log("Google auth successful, user data:", req.user);
+
+      if (!req.user || !req.user.user) {
+        console.error("Missing user data in request");
+        return res.redirect("https://flare48.onrender.com/?error=missing_user_data");
       }
 
       const { user, token } = req.user;
 
-      // Create the redirect URL with token
-      const redirectURL = new URL("/auth/google/callback", "https://flare48.onrender.com");
+      // Create the redirect URL with token and user data
+      const redirectURL = new URL("/news", "https://flare48.onrender.com");
       redirectURL.searchParams.append("token", token);
       redirectURL.searchParams.append("userId", user._id);
       redirectURL.searchParams.append("username", user.username);
-      
-      // Redirect to frontend with token and user data
+      redirectURL.searchParams.append("email", user.email);
+
+      console.log("Redirecting to:", redirectURL.toString());
       res.redirect(redirectURL.toString());
     } catch (error) {
-      console.error("Google Callback Error:", error);
-      res.redirect("https://flare48.onrender.com?error=server_error");
+      console.error("Error in Google callback handler:", error);
+      res.redirect("https://flare48.onrender.com/?error=server_error");
     }
   }
 );

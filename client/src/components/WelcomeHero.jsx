@@ -49,6 +49,9 @@ const WelcomeHero = () => {
     
     try {
       const endpoint = isSignup ? REGISTER_URL : LOGIN_URL;
+      console.log("Sending request to:", endpoint);
+      console.log("Request data:", formData);
+      
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -61,7 +64,9 @@ const WelcomeHero = () => {
       let data;
       try {
         data = await response.json();
+        console.log("Server response:", data);
       } catch (err) {
+        console.error("Error parsing response:", err);
         setError("Server response was not in the expected format");
         setIsLoading(false);
         return;
@@ -79,9 +84,11 @@ const WelcomeHero = () => {
   
         navigate("/news");
       } else {
-        setError(data?.message || `Failed to ${isSignup ? 'sign up' : 'log in'}. Please try again.`);
+        console.error("Request failed:", data);
+        setError(data?.error || data?.message || `Failed to ${isSignup ? 'sign up' : 'log in'}. Please try again.`);
       }
     } catch (error) {
+      console.error("Network error:", error);
       setError("Unable to connect to the server. Please try again later.");
     } finally {
       setIsLoading(false);

@@ -70,10 +70,13 @@ if (missingVars.length) {
 // 🔹 Middleware Setup
 console.log("Initializing Middleware...");
 app.use(cors({ 
-  origin: ["https://flare48.onrender.com"], 
+  origin: "https://flare48.onrender.com",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
 console.log("CORS Enabled");
 

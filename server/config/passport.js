@@ -10,34 +10,44 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 
 // Debugging: Ensure required environment variables are loaded
-if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !process.env.GOOGLE_REDIRECT_URI) {
+if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    console.error("Missing required Google OAuth environment variables.");
     throw new Error("Missing required Google OAuth environment variables.");
 }
 
 // Dynamically set the callback URL
 const callbackURL = "https://flare48-j45i.onrender.com/auth/google/callback";
 
-
+// Configure Google OAuth Strategy
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: callbackURL,
+      scope: ['profile', 'email'],
+      state: true
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("Google Profile:", profile);
+        
         // Check if user already exists
         let user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
           // Create new user if doesn't exist
-          user = await User.create({
-            googleId: profile.id,
-            email: profile.emails[0].value,
-            username: profile.displayName.replace(/\s+/g, '').toLowerCase() + Math.random().toString(36).slice(-4),
-            profilePicture: profile.photos[0]?.value,
-          });
+          try {
+            user = await User.create({
+              googleId: profile.id,
+              email: profile.emails[0].value,
+              username: profile.displayName.replace(/\s+/g, '').toLowerCase() + Math.random().toString(36).slice(-4),
+              profilePicture: profile.photos[0]?.value,
+            });
+          } catch (createError) {
+            console.error("Error creating user:", createError);
+            return done(createError, null);
+          }
         }
 
         // Generate JWT token
@@ -57,14 +67,14 @@ passport.use(
 );
 
 // Properly Serialize & Deserialize User Sessions
-passport.serializeUser((user, done) => {
-  console.log("🔹 Serializing User:", user);
-  done(null, user);
+passport.serializeUser((userData, done) => {
+  console.log("🔹 Serializing User:", userData);
+  done(null, userData);
 });
 
-passport.deserializeUser((user, done) => {
-  console.log("🔹 Deserializing User:", user);
-  done(null, user);
+passport.deserializeUser((userData, done) => {
+  console.log("🔹 Deserializing User:", userData);
+  done(null, userData);
 });
 
 // Google OAuth Callback Route
