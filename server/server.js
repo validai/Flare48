@@ -100,11 +100,32 @@ app.use(passport.session());
 console.log("Passport.js Initialized");
 
 // 🔹 MongoDB Connection
+console.log("Attempting to connect to MongoDB...");
+console.log("MongoDB URI:", process.env.MONGO_URI ? "URI is set" : "URI is missing");
+
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to MongoDB"))
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+  })
+  .then(() => {
+    console.log("✅ Connected to MongoDB successfully");
+    // Start server only after successful DB connection
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+      console.log("📍 Environment:", process.env.NODE_ENV);
+      console.log("🛣️ Loaded Routes:", app._router.stack.filter(r => r.route).map(r => r.route.path));
+    });
+  })
   .catch((err) => {
-    console.error("MongoDB Connection Error:", err);
+    console.error("❌ MongoDB Connection Error:", {
+      name: err.name,
+      message: err.message,
+      code: err.code,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
     process.exit(1);
   });
 
@@ -143,9 +164,3 @@ app.use("*", (req, res) => {
 
 // 🔹 Global Error Handling Middleware
 app.use(errorHandler);
-
-// 🔹 Start the Server
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-  console.log("Loaded Routes:", app._router.stack.filter(r => r.route).map(r => r.route.path));
-});

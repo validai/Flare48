@@ -4,45 +4,120 @@ import jwt from "jsonwebtoken";
 
 // User Registration Controller
 export const register = async (req, res) => {
-  console.log("📩 Incoming Request Headers:", req.headers);
-  console.log("📩 Incoming Request Body:", req.body);
-
-  if (!req.body || Object.keys(req.body).length === 0) {
-    return res.status(400).json({ error: "Request body is empty or not parsed" });
-  }
-
-  const { username, email, password } = req.body;
-
-  if (!username || !email || !password) {
-    return res.status(400).json({ error: "All fields are required (username, email, password)" });
-  }
-
   try {
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) return res.status(400).json({ error: "Username or Email already exists" });
+    console.log("📝 Registration attempt:", {
+      email: req.body.email ? "provided" : "missing",
+      username: req.body.username ? "provided" : "missing",
+      password: req.body.password ? "provided" : "missing"
+    });
 
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = new User({ username, email, password: hashedPassword });
+    const { email, password, username } = req.body;
 
-    await newUser.save();
-    
+    // Validate required fields
+    if (!email || !password || !username) {
+      console.log("❌ Missing required fields");
+      return res.status(400).json({ 
+        error: "Missing required fields",
+        details: {
+          email: !email ? "Email is required" : null,
+          password: !password ? "Password is required" : null,
+          username: !username ? "Username is required" : null
+        }
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      console.log("❌ Password too short");
+      return res.status(400).json({ error: "Password must be at least 6 characters long" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { username }] 
+    });
+
+    if (existingUser) {
+      console.log("❌ User already exists:", {
+        email: existingUser.email === email,
+        username: existingUser.username === username
+      });
+      return res.status(400).json({ 
+        error: "User already exists",
+        details: {
+          email: existingUser.email === email ? "Email already in use" : null,
+          username: existingUser.username === username ? "Username already taken" : null
+        }
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create new user
+    const user = new User({
+      email,
+      username,
+      password: hashedPassword
+    });
+
+    // Save user to database
+    await user.save();
+    console.log("✅ User registered successfully:", { email, username });
+
     // Generate JWT token
     const token = jwt.sign(
-      { id: newUser._id, username: newUser.username },
+      { userId: user._id, email: user.email },
       process.env.JWT_SECRET,
-      { expiresIn: "48h" }
+      { expiresIn: '24h' }
     );
 
-    // Return user data and token
-    res.status(201).json({ 
+    // Send success response
+    res.status(201).json({
       message: "User registered successfully",
-      token,
-      userId: newUser._id,
-      username: newUser.username
+      user: {
+        id: user._id,
+        email: user.email,
+        username: user.username
+      },
+      token
     });
+
   } catch (error) {
-    console.error("❌ Registration Error:", error);
-    res.status(500).json({ error: "Server error during registration", details: error.message });
+    console.error("❌ Registration error:", {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+
+    // Handle MongoDB validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        error: "Validation Error",
+        details: Object.values(error.errors).map(err => ({
+          field: err.path,
+          message: err.message
+        }))
+      });
+    }
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        error: "Duplicate field",
+        details: {
+          field: Object.keys(error.keyPattern)[0],
+          message: `This ${Object.keys(error.keyPattern)[0]} is already taken`
+        }
+      });
+    }
+
+    // Generic error response
+    res.status(500).json({
+      error: "Internal server error",
+      message: "An unexpected error occurred during registration"
+    });
   }
 };
 
