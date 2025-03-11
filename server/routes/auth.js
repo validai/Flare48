@@ -43,10 +43,7 @@ function verifyToken(req, res, next) {
 }
 
 // Google OAuth Login Route
-router.get("/google", (req, res, next) => {
-  console.log("Google OAuth Login Attempted...");
-  passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
-});
+router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
 
 
 // Google OAuth Callback Route
@@ -54,6 +51,7 @@ router.get(
   "/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
+    console.log("Google Authentication Callback Hit!");
     if (!req.user) {
       console.error("Authentication Failed: No user data received.");
       return res.redirect("/");

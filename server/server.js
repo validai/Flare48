@@ -112,6 +112,7 @@ try {
     console.log(`API Route Accessed: ${req.method} ${req.originalUrl}`);
     next();
   }, apiRoutes);
+  app.use("/auth", authRoutes);
 
   app.use("/api/auth", (req, res, next) => {
     console.log(`Auth Route Accessed: ${req.method} ${req.originalUrl}`);
