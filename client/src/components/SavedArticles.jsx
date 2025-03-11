@@ -1,23 +1,100 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const SavedArticles = () => {
   const [savedArticles, setSavedArticles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("savedArticles")) || [];
-    setSavedArticles(saved);
-  }, []);
+  // Get user from session storage
+  const user = JSON.parse(sessionStorage.getItem("user"));
+  const token = sessionStorage.getItem("token");
 
-  const handleRemoveArticle = (article) => {
-    const updatedSavedArticles = savedArticles.filter(
-      (savedArticle) => savedArticle.url !== article.url
-    );
-    setSavedArticles(updatedSavedArticles);
-    localStorage.setItem("savedArticles", JSON.stringify(updatedSavedArticles));
+  useEffect(() => {
+    // Redirect if not authenticated
+    if (!user || !token) {
+      navigate("/");
+      return;
+    }
+
+    const fetchSavedArticles = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get(
+          `https://flare48-j45i.onrender.com/auth/saved-articles/${user._id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        setSavedArticles(response.data.savedArticles || []);
+      } catch (err) {
+        console.error("Error fetching saved articles:", err);
+        setError("Failed to load saved articles. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSavedArticles();
+  }, [user, token, navigate]);
+
+  const handleRemoveArticle = async (article) => {
+    try {
+      await axios.post(
+        "https://flare48-j45i.onrender.com/auth/removeArticle",
+        {
+          userId: user._id,
+          articleUrl: article.url
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      // Update local state after successful removal
+      setSavedArticles(current => 
+        current.filter(savedArticle => savedArticle.url !== article.url)
+      );
+    } catch (error) {
+      console.error("Error removing article:", error);
+      alert("Failed to remove article. Please try again.");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Loading saved articles...</h2>
+          <p className="text-gray-600">Please wait while we fetch your saved articles.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={() => navigate("/news")}
+            className="mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+          >
+            Back to News
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-20 relative">
@@ -69,7 +146,15 @@ const SavedArticles = () => {
             </div>
           ))
         ) : (
-          <p className="text-center text-lg text-gray-600">No saved articles yet.</p>
+          <div className="col-span-3 text-center py-8">
+            <p className="text-lg text-gray-600">No saved articles yet.</p>
+            <button
+              onClick={() => navigate("/news")}
+              className="mt-4 px-6 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+            >
+              Browse News
+            </button>
+          </div>
         )}
       </div>
     </div>

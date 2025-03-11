@@ -19,7 +19,7 @@ const Navbar = () => {
                                 </button>
                             </li>
                             <li className="text-black hover:text-primary-500 hover:scale-105">
-                                <button onClick={() => navigate('/savedarticles')}>
+                                <button onClick={() => navigate('/saved-articles')}>
                                     Saved Articles
                                 </button>
                             </li>
