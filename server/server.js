@@ -8,6 +8,9 @@ import apiRoutes from "./routes/api.js";
 import authRoutes from "./routes/auth.js";
 import errorHandler from "./middleware/errorHandler.js";
 
+// 🔹 Initialize Express App
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 // Load environment variables
 dotenv.config();
@@ -59,10 +62,6 @@ if (missingVars.length) {
   console.error(`ERROR: Missing environment variables: ${missingVars.join(", ")}`);
   process.exit(1);
 }
-
-// 🔹 Initialize Express App
-const app = express();
-const PORT = process.env.PORT || 3000;
 
 // 🔹 Middleware Setup
 console.log("Initializing Middleware...");
