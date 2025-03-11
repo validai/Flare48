@@ -13,37 +13,34 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !proce
 }
 
 // Dynamically set the callback URL
-const callbackURL = process.env.NODE_ENV === "production"
-    ? process.env.GOOGLE_REDIRECT_URI
-    : "http://localhost:5173/auth/google/callback";  // Ensure localhost is correct
+const callbackURL = process.env.GOOGLE_REDIRECT_URI;
 
-console.log("Using Google OAuth Callback URL:", callbackURL);
 
-passport.use(new GoogleStrategy(
+passport.use(
+  new GoogleStrategy(
     {
-        clientID: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: callbackURL
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_REDIRECT_URI, // Ensure this matches Google Cloud
     },
     async (accessToken, refreshToken, profile, done) => {
-        try {
-            console.log("🔹 Google Profile Retrieved:", profile);
-            return done(null, profile);
-        } catch (error) {
-            console.error("Error in Google OAuth Strategy:", error);
-            return done(error, null);
-        }
+      console.log("Google Profile Retrieved:", profile);
+      console.log("Access Token:", accessToken);
+      console.log("Refresh Token:", refreshToken);
+      return done(null, profile);
     }
-));
+  )
+);
 
+// Properly Serialize & Deserialize User Sessions
 passport.serializeUser((user, done) => {
-    console.log("🔹 Serializing User:", user);
-    done(null, user);
+  console.log("🔹 Serializing User:", user);
+  done(null, user);
 });
 
 passport.deserializeUser((user, done) => {
-    console.log("🔹 Deserializing User:", user);
-    done(null, user);
+  console.log("🔹 Deserializing User:", user);
+  done(null, user);
 });
 
 // Google OAuth Callback Route
