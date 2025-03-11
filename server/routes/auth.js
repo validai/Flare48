@@ -10,6 +10,29 @@ const router = express.Router();
 
 console.log("Auth API is running...");
 
+// Middleware to Verify JWT Token
+const verifyToken = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      console.log("No token provided in request");
+      return res.status(401).json({ error: "No token provided" });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) {
+        console.error("Token verification failed:", err.message);
+        return res.status(401).json({ error: "Invalid token" });
+      }
+      req.user = decoded;
+      next();
+    });
+  } catch (error) {
+    console.error("Error in token verification:", error);
+    res.status(500).json({ error: "Internal server error during token verification" });
+  }
+};
+
 // Base Route - Health Check
 router.get("/", (_req, res) => {
   res.json({ message: "Auth API is working!" });
@@ -20,25 +43,8 @@ router.post("/register", register);
 router.post("/login", login);
 router.get("/protected", verifyToken, protectedRoute);
 
-router.post("/saveArticle", saveArticle)
-
-router.post("/removeArticle", removeArticle)
-
-// Middleware to Verify JWT Token
-const verifyToken = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({ error: "No token provided" });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(401).json({ error: "Invalid token" });
-    }
-    req.user = decoded;
-    next();
-  });
-};
+router.post("/saveArticle", verifyToken, saveArticle);
+router.post("/removeArticle", verifyToken, removeArticle);
 
 // Google OAuth Login Route
 router.get("/google", passport.authenticate("google", { 
@@ -91,11 +97,13 @@ router.get("/saved-articles/:userId", verifyToken, async (req, res) => {
     
     // Verify that the token's user matches the requested userId
     if (req.user._id !== userId) {
+      console.log("Unauthorized access attempt:", { tokenUserId: req.user._id, requestedUserId: userId });
       return res.status(403).json({ error: "Unauthorized access to user's saved articles" });
     }
 
     const user = await User.findById(userId);
     if (!user) {
+      console.log("User not found:", userId);
       return res.status(404).json({ error: "User not found" });
     }
 
