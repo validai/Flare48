@@ -78,8 +78,20 @@ router.get(
         }
         console.log("Google Authentication Success:", req.user);
 
-        // Ensure CLIENT_URL exists, fallback to localhost
-        const redirectURL = process.env.CLIENT_URL || "http://localhost:5173/Home";
+        // Get the base client URL
+        const baseClientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        
+        // Include token and user data in the redirect URL
+        const token = req.user.token;
+        const userData = {
+            _id: req.user.user._id,
+            username: req.user.user.username,
+            email: req.user.user.email
+        };
+        
+        // Create the redirect URL with token and encoded user data
+        const redirectURL = `${baseClientUrl}/news?token=${token}&userData=${encodeURIComponent(JSON.stringify(userData))}`;
+        
         console.log("Redirecting to:", redirectURL);
         res.redirect(redirectURL);
     }

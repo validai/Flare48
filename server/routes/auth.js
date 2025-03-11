@@ -56,13 +56,13 @@ router.get(
     try {
       if (!req.user) {
         console.error("Authentication Failed: No user data received");
-        return res.redirect("https://flare48-6c1x.onrender.com?error=auth_failed");
+        return res.redirect("https://flare48.onrender.com?error=auth_failed");
       }
 
       const { user, token } = req.user;
 
       // Create the redirect URL with token
-      const redirectURL = new URL("/news", "https://flare48-6c1x.onrender.com");
+      const redirectURL = new URL("/auth/google/callback", "https://flare48.onrender.com");
       redirectURL.searchParams.append("token", token);
       redirectURL.searchParams.append("userId", user._id);
       redirectURL.searchParams.append("username", user.username);
@@ -71,7 +71,7 @@ router.get(
       res.redirect(redirectURL.toString());
     } catch (error) {
       console.error("Google Callback Error:", error);
-      res.redirect("https://flare48-6c1x.onrender.com?error=server_error");
+      res.redirect("https://flare48.onrender.com?error=server_error");
     }
   }
 );
