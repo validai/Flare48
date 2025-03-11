@@ -4,6 +4,8 @@ dotenv.config();  // Ensure environment variables load before anything else
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import express from "express";
+import User from "../models/User.js";
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
@@ -13,7 +15,7 @@ if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET || !proce
 }
 
 // Dynamically set the callback URL
-const callbackURL = process.env.GOOGLE_REDIRECT_URI;
+const callbackURL = "https://flare48-6c1x.onrender.com/auth/google/callback";
 
 
 passport.use(
@@ -21,13 +23,35 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: process.env.GOOGLE_REDIRECT_URI, // Ensure this matches Google Cloud
+      callbackURL: callbackURL,
     },
     async (accessToken, refreshToken, profile, done) => {
-      console.log("Google Profile Retrieved:", profile);
-      console.log("Access Token:", accessToken);
-      console.log("Refresh Token:", refreshToken);
-      return done(null, profile);
+      try {
+        // Check if user already exists
+        let user = await User.findOne({ googleId: profile.id });
+
+        if (!user) {
+          // Create new user if doesn't exist
+          user = await User.create({
+            googleId: profile.id,
+            email: profile.emails[0].value,
+            username: profile.displayName.replace(/\s+/g, '').toLowerCase() + Math.random().toString(36).slice(-4),
+            profilePicture: profile.photos[0]?.value,
+          });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+          { id: user._id, username: user.username },
+          process.env.JWT_SECRET,
+          { expiresIn: "48h" }
+        );
+
+        return done(null, { user, token });
+      } catch (error) {
+        console.error("Google Auth Error:", error);
+        return done(error, null);
+      }
     }
   )
 );

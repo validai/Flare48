@@ -7,6 +7,8 @@ const WelcomeHero = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSignup, setIsSignup] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const images = [
@@ -27,10 +29,13 @@ const WelcomeHero = () => {
     console.log(`toggleModal triggered - Type: ${type}`);
     setIsSignup(type === "signup");
     setIsModalOpen(!isModalOpen);
+    setError("");
   };
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+    setIsLoading(true);
   
     const formData = {
       email: e.target.email.value.trim(),
@@ -38,9 +43,9 @@ const WelcomeHero = () => {
       username: e.target.username?.value.trim(), 
     };
   
- 
-    const REGISTER_URL = import.meta.env.VITE_REGISTER_URL || "http://localhost:3000/api/auth/register";
-    const LOGIN_URL = import.meta.env.VITE_LOGIN_URL || "http://localhost:3000/api/auth/login";
+    const backendUrl = "https://flare48-2sfl.onrender.com";
+    const REGISTER_URL = `${backendUrl}/api/auth/register`;
+    const LOGIN_URL = `${backendUrl}/api/auth/login`;
     
     try {
       const endpoint = isSignup ? REGISTER_URL : LOGIN_URL;
@@ -50,35 +55,43 @@ const WelcomeHero = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
+        credentials: 'include'
       });
     
       let data;
       try {
         data = await response.json();
       } catch (err) {
-        console.error("Failed to parse JSON response:", err);
-        throw new Error("Invalid response from server");
+        setError("Server response was not in the expected format");
+        setIsLoading(false);
+        return;
       }
     
       if (response.ok) {
         console.log("Success:", data);
   
-        sessionStorage.setItem("user", JSON.stringify({ _id: data.userId, username: data.username, email: formData.email }));
+        sessionStorage.setItem("user", JSON.stringify({ 
+          _id: data.userId, 
+          username: data.username || formData.username, 
+          email: formData.email 
+        }));
         sessionStorage.setItem("token", data.token);
   
         navigate("/news");
       } else {
-        console.error("Error:", data?.message || "Something went wrong");
+        setError(data?.message || `Failed to ${isSignup ? 'sign up' : 'log in'}. Please try again.`);
       }
     } catch (error) {
-      console.error("Network error:", error);
+      setError("Unable to connect to the server. Please try again later.");
+    } finally {
+      setIsLoading(false);
     }
   };
   
 
   const handleGoogleAuth = () => {
     console.log("Google OAuth button clicked");
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+    const backendUrl = "https://flare48-2sfl.onrender.com";
     window.location.href = `${backendUrl}/api/auth/google`;
   };
   
@@ -123,6 +136,12 @@ const WelcomeHero = () => {
       <h2 className="text-2xl font-bold mb-4 text-black">
         {isSignup ? "Sign Up" : "Login"}
       </h2>
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleFormSubmit}>
         {isSignup && (
@@ -174,16 +193,22 @@ const WelcomeHero = () => {
 
         <button
           type="submit"
-          className="w-full py-3 bg-black text-white rounded-lg hover:bg-neutral-800 transition"
+          disabled={isLoading}
+          className={`w-full py-3 bg-black text-white rounded-lg transition ${
+            isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-800'
+          }`}
         >
-          {isSignup ? "Sign Up" : "Log In"}
+          {isLoading ? 'Please wait...' : (isSignup ? "Sign Up" : "Log In")}
         </button>
       </form>
 
       <button
         type="button"
-        className="w-full py-3 mt-4 bg-neutral-600 text-white rounded-lg hover:bg-neutral-400 transition"
+        className={`w-full py-3 mt-4 bg-neutral-600 text-white rounded-lg transition ${
+          isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-700'
+        }`}
         onClick={handleGoogleAuth}
+        disabled={isLoading}
       >
         Continue with Google
       </button>
@@ -192,6 +217,7 @@ const WelcomeHero = () => {
         type="button"
         className="w-full py-2 mt-4 text-black hover:text-neutral-600 text-sm"
         onClick={() => setIsModalOpen(false)}
+        disabled={isLoading}
       >
         Close
       </button>

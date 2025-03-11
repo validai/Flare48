@@ -43,33 +43,38 @@ function verifyToken(req, res, next) {
 }
 
 // Google OAuth Login Route
-router.get("/google", passport.authenticate("google", { scope: ["profile", "email"] }));
-
+router.get("/google", passport.authenticate("google", { 
+  scope: ["profile", "email"],
+  prompt: "select_account"
+}));
 
 // Google OAuth Callback Route
 router.get(
   "/google/callback",
   passport.authenticate("google", { failureRedirect: "/" }),
   (req, res) => {
-    console.log("Google Authentication Callback Hit!");
-    if (!req.user) {
-      console.error("Authentication Failed: No user data received.");
-      return res.redirect("/");
+    try {
+      if (!req.user) {
+        console.error("Authentication Failed: No user data received");
+        return res.redirect("https://flare48-6c1x.onrender.com?error=auth_failed");
+      }
+
+      const { user, token } = req.user;
+
+      // Create the redirect URL with token
+      const redirectURL = new URL("/news", "https://flare48-6c1x.onrender.com");
+      redirectURL.searchParams.append("token", token);
+      redirectURL.searchParams.append("userId", user._id);
+      redirectURL.searchParams.append("username", user.username);
+      
+      // Redirect to frontend with token and user data
+      res.redirect(redirectURL.toString());
+    } catch (error) {
+      console.error("Google Callback Error:", error);
+      res.redirect("https://flare48-6c1x.onrender.com?error=server_error");
     }
-
-    console.log("Google Authentication Success:", req.user);
-
-
-    const redirectURL = process.env.CLIENT_URL
-  ? `${process.env.CLIENT_URL}/home`
-  : "http://localhost:5173/home"; // Redirect to /home
-
-
-    console.log("Redirecting to:", redirectURL);
-    res.redirect(redirectURL);
   }
 );
-
 
 export default router;
 
