@@ -10,20 +10,26 @@ const GoogleAuthCallback = () => {
     const token = params.get('token');
     const userId = params.get('userId');
     const username = params.get('username');
+    const email = params.get('email');
+
+    console.log("Received auth data:", { token, userId, username, email });
 
     if (token && userId && username) {
       // Store user data in sessionStorage
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('user', JSON.stringify({
         _id: userId,
-        username: username
+        username: username,
+        email: email
       }));
 
+      console.log("Stored auth data in session");
+      
       // Redirect to news page
       navigate('/news');
     } else {
       // Handle error case
-      console.error('Missing authentication data');
+      console.error('Missing authentication data:', { token, userId, username });
       navigate('/?error=auth_failed');
     }
   }, [navigate, location]);

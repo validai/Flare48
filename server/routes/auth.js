@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
 import { register, login, protectedRoute, saveArticle, removeArticle } from "../controllers/authControllers.js";
+import User from "../models/User.js";
 
 dotenv.config();
 const router = express.Router();
@@ -24,23 +25,20 @@ router.post("/saveArticle", saveArticle)
 router.post("/removeArticle", removeArticle)
 
 // Middleware to Verify JWT Token
-function verifyToken(req, res, next) {
-  const token = req.header("Authorization")?.split(" ")[1];
-
+const verifyToken = (req, res, next) => {
+  const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
-    console.warn("Access Denied: No Token Provided");
-    return res.status(401).json({ error: "Access Denied: No Token provided" });
+    return res.status(401).json({ error: "No token provided" });
   }
 
-  try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+    req.user = decoded;
     next();
-  } catch (error) {
-    console.error("Invalid Token Error:", error);
-    res.status(400).json({ error: "Invalid Token", details: error.message });
-  }
-}
+  });
+};
 
 // Google OAuth Login Route
 router.get("/google", passport.authenticate("google", { 
@@ -85,6 +83,28 @@ router.get(
     }
   }
 );
+
+// Get saved articles for a user
+router.get("/saved-articles/:userId", verifyToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Verify that the token's user matches the requested userId
+    if (req.user._id !== userId) {
+      return res.status(403).json({ error: "Unauthorized access to user's saved articles" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({ savedArticles: user.savedArticles });
+  } catch (error) {
+    console.error("Error fetching saved articles:", error);
+    res.status(500).json({ error: "Failed to fetch saved articles", details: error.message });
+  }
+});
 
 export default router;
 

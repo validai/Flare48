@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
     const navigate = useNavigate();
+    const user = JSON.parse(sessionStorage.getItem("user"));
 
     return (
         <nav className="sticky top-0 z-50 py-6 bg-white border-b border-neutral-700/80">
@@ -18,11 +19,13 @@ const Navbar = () => {
                                     Home
                                 </button>
                             </li>
-                            <li className="text-black hover:text-primary-500 hover:scale-105">
-                                <button onClick={() => navigate('/saved-articles')}>
-                                    Saved Articles
-                                </button>
-                            </li>
+                            {user && (
+                                <li className="text-black hover:text-primary-500 hover:scale-105">
+                                    <button onClick={() => navigate('/saved-articles')}>
+                                        Saved Articles
+                                    </button>
+                                </li>
+                            )}
                         </ul>
                     </div>
                 </div>

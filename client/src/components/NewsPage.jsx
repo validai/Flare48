@@ -6,30 +6,46 @@ import { useNavigate } from "react-router-dom";
 const NewsPage = () => {
   const [articles, setArticles] = useState([]);
   const [savedArticles, setSavedArticles] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("savedArticles")) || [];
-    setSavedArticles(saved);
-  }, []);
-
-  // Retrieve user from sessionStorage
+  // Get user from session storage
   const user = JSON.parse(sessionStorage.getItem("user"));
+  const token = sessionStorage.getItem("token");
   
   // If no user, redirect to login page
   useEffect(() => {
-    if (!user) {
-      navigate("/login");
+    if (!user || !token) {
+      navigate("/");
+      return;
     }
-  }, [user, navigate]);
+  }, [user, token, navigate]);
+
+  // Fetch saved articles from backend
+  const fetchSavedArticles = async () => {
+    try {
+      const response = await axios.get(
+        `https://flare48-j45i.onrender.com/auth/saved-articles/${user._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      setSavedArticles(response.data.savedArticles || []);
+    } catch (error) {
+      console.error("Error fetching saved articles:", error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        navigate("/");
+      }
+    }
+  };
 
   const fetchArticles = async () => {
-    const apiKey = "01008499182045707c100247f657ba5c";
-    const currentDate = new Date();
-    const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
-    const formattedDate = pastDate.toISOString();
-
     try {
+      setIsLoading(true);
       // Check if we have cached articles and they're not too old
       const cachedData = localStorage.getItem('cachedArticles');
       if (cachedData) {
@@ -41,6 +57,11 @@ const NewsPage = () => {
           return;
         }
       }
+
+      const apiKey = "01008499182045707c100247f657ba5c";
+      const currentDate = new Date();
+      const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
+      const formattedDate = pastDate.toISOString();
 
       const response = await axios.get(
         `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`
@@ -61,47 +82,119 @@ const NewsPage = () => {
         const { articles: cachedArticles } = JSON.parse(cachedData);
         setArticles(cachedArticles);
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  // Fetch both articles and saved articles on mount
   useEffect(() => {
-    fetchArticles();
-  }, []);
+    if (user && token) {
+      fetchArticles();
+      fetchSavedArticles();
+    }
+  }, [user, token]);
 
   const handleSaveArticle = async (article) => {
     try {
       const response = await axios.post(
-        import.meta.env.VITE_SAVE_ARTICLE_URL,
+        "https://flare48-j45i.onrender.com/auth/saveArticle",
         {
-          userId: user?._id, // Pass the logged-in user's ID
+          userId: user._id,
           article: {
             title: article.title,
             url: article.url,
             image: article.image,
             publishedAt: article.publishedAt,
           },
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
       );
-      console.log(response.data.message);
+      
+      // Update local state with the newly saved article
+      setSavedArticles(prev => [...prev, response.data.savedArticle]);
+      
+      // Show success message
+      alert("Article saved successfully!");
     } catch (error) {
       console.error("Error saving article:", error);
+      const errorMessage = error.response?.data?.error || error.message || "Failed to save article";
+      alert(errorMessage);
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        navigate("/");
+      }
     }
   };
 
   const handleRemoveArticle = async (article) => {
     try {
-      const response = await axios.post(
-        import.meta.env.VITE_REMOVE_ARTICLE_URL,
+      await axios.post(
+        "https://flare48-j45i.onrender.com/auth/removeArticle",
         {
-          userId: user?._id, // Pass the logged-in user's ID
-          articleUrl: article.url,
+          userId: user._id,
+          articleUrl: article.url
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
       );
-      console.log(response.data.message);
+
+      // Update local state by removing the article
+      setSavedArticles(current => 
+        current.filter(savedArticle => savedArticle.url !== article.url)
+      );
+      
+      // Show success message
+      alert("Article removed successfully!");
     } catch (error) {
       console.error("Error removing article:", error);
+      const errorMessage = error.response?.data?.error || error.message || "Failed to remove article";
+      alert(errorMessage);
+
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        navigate("/");
+      }
     }
   };
+
+  if (!user || !token) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-gray-600">Please log in to view the news.</p>
+          <button
+            onClick={() => navigate("/")}
+            className="mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Loading news...</h2>
+          <p className="text-gray-600">Please wait while we fetch the latest articles.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

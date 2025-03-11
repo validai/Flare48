@@ -16,6 +16,7 @@ const SavedArticles = () => {
   useEffect(() => {
     // Redirect if not authenticated
     if (!user || !token) {
+      console.log("User not authenticated, redirecting to home");
       navigate("/");
       return;
     }
@@ -23,6 +24,9 @@ const SavedArticles = () => {
     const fetchSavedArticles = async () => {
       try {
         setIsLoading(true);
+        setError(null); // Reset error state before fetching
+
+        console.log("Fetching saved articles for user:", user._id);
         const response = await axios.get(
           `https://flare48-j45i.onrender.com/auth/saved-articles/${user._id}`,
           {
@@ -31,10 +35,24 @@ const SavedArticles = () => {
             }
           }
         );
+
+        if (!response.data) {
+          throw new Error("No data received from server");
+        }
+
+        console.log("Received saved articles:", response.data);
         setSavedArticles(response.data.savedArticles || []);
       } catch (err) {
         console.error("Error fetching saved articles:", err);
-        setError("Failed to load saved articles. Please try again later.");
+        const errorMessage = err.response?.data?.error || err.message || "Failed to load saved articles";
+        setError(errorMessage);
+        
+        // If unauthorized, clear session and redirect
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          sessionStorage.removeItem("user");
+          sessionStorage.removeItem("token");
+          navigate("/");
+        }
       } finally {
         setIsLoading(false);
       }
@@ -64,9 +82,35 @@ const SavedArticles = () => {
       );
     } catch (error) {
       console.error("Error removing article:", error);
-      alert("Failed to remove article. Please try again.");
+      const errorMessage = error.response?.data?.error || error.message || "Failed to remove article";
+      alert(errorMessage);
+
+      // If unauthorized, clear session and redirect
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        sessionStorage.removeItem("user");
+        sessionStorage.removeItem("token");
+        navigate("/");
+      }
     }
   };
+
+  // If not authenticated, show message and redirect
+  if (!user || !token) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+          <p className="text-gray-600">Please log in to view your saved articles.</p>
+          <button
+            onClick={() => navigate("/")}
+            className="mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
