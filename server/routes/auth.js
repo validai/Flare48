@@ -2,7 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import passport from "../config/passport.js";
 import jwt from "jsonwebtoken";
-import { register, login, protectedRoute } from "../controllers/authControllers.js";
+import { register, login, protectedRoute, saveArticle, removeArticle } from "../controllers/authControllers.js";
 
 dotenv.config();
 const router = express.Router();
