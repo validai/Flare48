@@ -34,7 +34,7 @@ const UserSchema = new mongoose.Schema(
     savedArticles: [
       {
         title: { type: String, required: true },
-        url: { type: String, required: true, unique: true },
+        url: { type: String, required: true},
         image: { type: String },
         publishedAt: { type: Date },
       },
