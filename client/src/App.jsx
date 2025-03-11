@@ -1,10 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import WelcomeHero from "./components/WelcomeHero";
+import Home from "./components/Home";  // Updated to use Home
 import NewsPage from "./components/NewsPage";
-import ThreeNewsSection from "./components/ThreeNewsSection";
 import Footer from "./components/Footer";
-import FAQ from "./components/FAQ";
 import SavedArticles from "./components/SavedArticles";
 
 function App() {
@@ -12,16 +10,7 @@ function App() {
     <>
       <Navbar />
       <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              <WelcomeHero />
-              <ThreeNewsSection />
-              <FAQ />
-            </>
-          }
-        />
+        <Route path="/" element={<Home />} />   {/* Home is now the main page */}
         <Route path="/news" element={<NewsPage />} />
         <Route path="/saved-articles" element={<SavedArticles />} />
       </Routes>

@@ -55,7 +55,7 @@ router.get(
         console.log("Google Authentication Success:", req.user);
 
         // Ensure CLIENT_URL exists, fallback to localhost
-        const redirectURL = process.env.CLIENT_URL || "http://localhost:5173/dashboard";
+        const redirectURL = process.env.CLIENT_URL || "http://localhost:5173/Home";
         console.log("Redirecting to:", redirectURL);
         res.redirect(redirectURL);
     }

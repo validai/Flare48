@@ -182,7 +182,7 @@ const WelcomeHero = () => {
 
       <button
         type="button"
-        className="w-full py-3 mt-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+        className="w-full py-3 mt-4 bg-blue-600 text-white rounded-lg hover:bg-red-700 transition"
         onClick={handleGoogleAuth}
       >
         Continue with Google
