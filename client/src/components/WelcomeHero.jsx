@@ -188,7 +188,7 @@ const WelcomeHero = () => {
           Stay Informed with Flare48
         </h1>
         <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
-          Your source for the latest news and updates from around the world.
+          Your source for the latest news and updates from around the world of only the past 48 hours.
           Get real-time coverage of breaking stories.
         </p>
         <div className="flex gap-4 justify-center">
