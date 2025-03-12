@@ -25,53 +25,71 @@ const NewsPage = () => {
 
   // Add the fetchArticles function
   const fetchArticles = useCallback(async () => {
-    try {
-      const apiKey = "01008499182045707c100247f657ba5c";
-      const response = await axios.get(
-        `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${apiKey}`
-      );
+    // Array of API keys to try in sequence
+    const apiKeys = [
+      "227e827efba517c4a1b449b10d7bc2dd",
+      "01008499182045707c100247f657ba5c"
+    ];
 
-      if (response?.data?.articles) {
-        const articles = response.data.articles.filter(article => 
-          article.image && article.title && article.url
+    let lastError = null;
+
+    // Try each API key until one works
+    for (const apiKey of apiKeys) {
+      try {
+        const response = await axios.get(
+          `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${apiKey}`
         );
 
-        localStorage.setItem('cachedArticles', JSON.stringify({
-          articles,
-          timestamp: Date.now()
-        }));
+        if (response?.data?.articles) {
+          const articles = response.data.articles.filter(article => 
+            article.image && article.title && article.url
+          );
 
-        setState(prev => ({ 
-          ...prev, 
-          articles,
-          isLoadingArticles: false,
-          error: null
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching articles:", error?.response?.data || error);
-      
-      // Try to load from cache first
-      let cachedArticles = [];
-      try {
-        const cachedData = localStorage.getItem('cachedArticles');
-        if (cachedData) {
-          const parsed = JSON.parse(cachedData);
-          if (parsed && Array.isArray(parsed.articles)) {
-            cachedArticles = parsed.articles;
-          }
+          localStorage.setItem('cachedArticles', JSON.stringify({
+            articles,
+            timestamp: Date.now()
+          }));
+
+          setState(prev => ({ 
+            ...prev, 
+            articles,
+            isLoadingArticles: false,
+            error: null
+          }));
+
+          // If successful, exit the function
+          return;
         }
-      } catch (e) {
-        console.error("Error parsing cached articles:", e);
+      } catch (error) {
+        console.error(`Error fetching articles with API key ${apiKey}:`, error?.response?.data || error);
+        lastError = error;
+        // Continue to next API key
+        continue;
       }
-
-      setState(prev => ({ 
-        ...prev, 
-        articles: cachedArticles,
-        isLoadingArticles: false,
-        error: cachedArticles.length ? "Using cached articles. Please refresh later." : "Failed to load articles. Please try again later."
-      }));
     }
+
+    // If all API keys failed, try to load from cache
+    let cachedArticles = [];
+    try {
+      const cachedData = localStorage.getItem('cachedArticles');
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        if (parsed && Array.isArray(parsed.articles)) {
+          cachedArticles = parsed.articles;
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing cached articles:", e);
+    }
+
+    setState(prev => ({ 
+      ...prev, 
+      articles: cachedArticles,
+      isLoadingArticles: false,
+      error: cachedArticles.length 
+        ? "Using cached articles. All API keys failed. Please try again later." 
+        : "Failed to load articles. All API attempts failed. Please try again later."
+    }));
   }, []);
 
   const fetchSavedArticles = useCallback(async () => {
