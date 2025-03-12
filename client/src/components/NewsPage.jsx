@@ -168,16 +168,18 @@ const NewsPage = () => {
     if (cachedData) {
       try {
         const { articles: cachedArticles } = JSON.parse(cachedData);
-        setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
+        setState(prev => ({ ...prev, articles: cachedArticles }));
       } catch (e) {
         localStorage.removeItem('cachedArticles');
       }
     }
 
-    // Initial fetch with delay to prevent resource exhaustion
+    // Fetch saved articles immediately
+    fetchSavedArticles();
+
+    // Then fetch fresh articles with a slight delay
     const initialFetchTimeout = setTimeout(() => {
       fetchArticles();
-      fetchSavedArticles();
     }, 1000);
 
     // Set up refresh intervals with longer periods
@@ -292,8 +294,13 @@ const NewsPage = () => {
 
       if (response.status === 200) {
         console.log("Article removed successfully");
-        // Fetch latest saved articles to ensure sync with database
-        await fetchSavedArticles();
+        setState(prev => ({
+          ...prev,
+          savedArticles: prev.savedArticles.filter(
+            savedArticle => normalizeUrl(savedArticle.url) !== normalizeUrl(article.url)
+          ),
+          error: null
+        }));
       } else {
         console.error("Failed to remove article:", response.data);
         setState(prev => ({
