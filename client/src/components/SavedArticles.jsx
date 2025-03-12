@@ -117,10 +117,80 @@ const SavedArticles = () => {
       return;
     }
 
-    fetchSavedArticles();
+    let isMounted = true;
 
-    // No intervals or continuous polling
-  }, [user, token, navigate, fetchSavedArticles]);
+    const fetchData = async () => {
+      try {
+        // Check cache first
+        const cachedData = localStorage.getItem('savedArticlesCache');
+        if (cachedData) {
+          const { articles, timestamp } = JSON.parse(cachedData);
+          const cacheAge = Date.now() - timestamp;
+          // Use cache if it's less than 5 minutes old
+          if (cacheAge < 5 * 60 * 1000) {
+            setState(prev => ({ 
+              ...prev, 
+              savedArticles: articles,
+              isLoading: false,
+              error: null
+            }));
+            return;
+          }
+        }
+
+        // If cache is old or doesn't exist, fetch new data
+        const response = await api.get(
+          `/auth/saved-articles/${user._id}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+
+        if (response?.data?.savedArticles && isMounted) {
+          // Update cache
+          localStorage.setItem('savedArticlesCache', JSON.stringify({
+            articles: response.data.savedArticles,
+            timestamp: Date.now()
+          }));
+
+          setState(prev => ({ 
+            ...prev, 
+            savedArticles: response.data.savedArticles,
+            isLoading: false,
+            error: null
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching saved articles:", {
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message
+        });
+
+        if (isMounted) {
+          setState(prev => ({
+            ...prev,
+            error: error.response?.data?.error || "Failed to fetch saved articles",
+            isLoading: false
+          }));
+
+          if (error.response?.status === 401 || error.response?.status === 403) {
+            sessionStorage.removeItem("user");
+            sessionStorage.removeItem("token");
+            navigate("/");
+          }
+        }
+      }
+    };
+
+    fetchData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, token, navigate]);
 
   const normalizeUrl = (url) => {
     try {
@@ -154,13 +224,21 @@ const SavedArticles = () => {
 
       if (response.status === 200) {
         console.log("Article removed successfully");
-        // Update state with normalized URLs
+        // Update state and cache with normalized URLs
+        const updatedArticles = state.savedArticles.filter(
+          savedArticle => normalizeUrl(savedArticle.url) !== normalizeUrl(article.url)
+        );
+        
         setState(prev => ({
           ...prev,
-          savedArticles: prev.savedArticles.filter(
-            savedArticle => normalizeUrl(savedArticle.url) !== normalizeUrl(article.url)
-          ),
+          savedArticles: updatedArticles,
           error: null
+        }));
+
+        // Update cache
+        localStorage.setItem('savedArticlesCache', JSON.stringify({
+          articles: updatedArticles,
+          timestamp: Date.now()
         }));
       } else {
         console.error("Failed to remove article:", response.data);

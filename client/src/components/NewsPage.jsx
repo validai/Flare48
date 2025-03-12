@@ -219,8 +219,27 @@ const NewsPage = () => {
 
     const fetchData = async () => {
       try {
-        // Fetch saved articles first with a small delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Check cache first
+        const cachedData = localStorage.getItem('cachedArticles');
+        if (cachedData) {
+          const { articles: cachedArticles, timestamp } = JSON.parse(cachedData);
+          const cacheAge = Date.now() - timestamp;
+          // Use cache if it's less than 15 minutes old
+          if (cacheAge < 15 * 60 * 1000) {
+            if (isMounted) {
+              setState(prev => ({ 
+                ...prev, 
+                articles: cachedArticles,
+                isLoadingArticles: false 
+              }));
+              // Fetch saved articles once
+              await fetchSavedArticles();
+              return;
+            }
+          }
+        }
+
+        // If cache is old or doesn't exist, fetch new data
         if (isMounted) {
           await fetchSavedArticles();
           await fetchArticles();
@@ -232,14 +251,8 @@ const NewsPage = () => {
 
     fetchData();
 
-    // Set up refresh intervals
-    const articlesInterval = setInterval(fetchArticles, 10 * 60 * 1000); // 10 minutes
-    const savedArticlesInterval = setInterval(fetchSavedArticles, 60 * 1000); // 1 minute
-
     return () => {
       isMounted = false;
-      clearInterval(articlesInterval);
-      clearInterval(savedArticlesInterval);
     };
   }, [state.isUserLoaded, fetchArticles, fetchSavedArticles]);
 
