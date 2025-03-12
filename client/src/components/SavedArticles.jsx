@@ -7,46 +7,14 @@ import axios from "axios";
 const api = axios.create({
   baseURL: 'https://flare48-j45i.onrender.com',
   withCredentials: true,
-  timeout: 30000, // Increased timeout
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   }
 });
 
-// Circuit breaker state
-let isCircuitOpen = false;
-let lastHealthCheck = 0;
-const HEALTH_CHECK_INTERVAL = 10000; // 10 seconds
-const CIRCUIT_RESET_TIMEOUT = 30000; // 30 seconds
-
-// Track failed attempts to prevent excessive retries
-let failedAttempts = 0;
-const MAX_FAILED_ATTEMPTS = 3;
-const RETRY_RESET_TIMEOUT = 60000; // 1 minute
-
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  response => {
-    // Reset failed attempts and circuit breaker on successful response
-    failedAttempts = 0;
-    isCircuitOpen = false;
-    return response;
-  },
-  error => {
-    // Only log errors that aren't due to rate limiting or expected auth issues
-    if (!error.response?.status || (error.response.status !== 429 && error.response.status !== 401 && error.response.status !== 403)) {
-      console.error('API Error:', {
-        url: error.config?.url,
-        status: error.response?.status,
-        message: error.message
-      });
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Get user from session storage
+// Enhanced user data validation
 const getUserData = () => {
   try {
     const userData = sessionStorage.getItem("user");
@@ -57,8 +25,18 @@ const getUserData = () => {
     }
 
     const parsedUser = JSON.parse(userData);
-    if (!parsedUser?._id) {
-      console.error("Invalid user data in session storage");
+    
+    // Strict validation of user data
+    if (!parsedUser || typeof parsedUser !== 'object' || !parsedUser._id) {
+      console.error("Invalid or incomplete user data:", parsedUser);
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      return { user: null, token: null };
+    }
+
+    // Validate token format (should be a non-empty string)
+    if (typeof token !== 'string' || !token.trim()) {
+      console.error("Invalid token format");
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("token");
       return { user: null, token: null };
@@ -79,21 +57,31 @@ const SavedArticles = () => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Get user data using the new function
+  // Get user data with strict validation
   const { user, token } = getUserData();
 
-  const fetchSavedArticles = useCallback(async () => {
-    try {
-      if (!user?._id || !token) {
-        navigate("/");
-        return;
-      }
+  // Immediately redirect if no valid user data
+  useEffect(() => {
+    if (!user?._id || !token) {
+      navigate("/");
+    }
+  }, [user, token, navigate]);
 
-      const response = await api.get(`/auth/saved-articles/${user._id}`, {
+  const fetchSavedArticles = useCallback(async () => {
+    // Double check user data before making request
+    const { user: currentUser, token: currentToken } = getUserData();
+    if (!currentUser?._id || !currentToken) {
+      navigate("/");
+      return;
+    }
+
+    try {
+      const response = await api.get(`/auth/saved-articles/${currentUser._id}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${currentToken}`,
+          'Cache-Control': 'no-cache'
         },
-        timeout: 5000 // 5 second timeout
+        timeout: 5000
       });
 
       if (response?.data?.savedArticles) {
@@ -104,12 +92,12 @@ const SavedArticles = () => {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
-        return;
       }
+      // Silently handle other errors
     } finally {
       setIsLoading(false);
     }
-  }, [user, token, navigate]);
+  }, [navigate]);
 
   useEffect(() => {
     if (!user || !token) {
@@ -117,25 +105,36 @@ const SavedArticles = () => {
       return;
     }
 
-    // Initial fetch
-    fetchSavedArticles();
+    // Initial fetch with delay
+    const initialFetchTimeout = setTimeout(() => {
+      fetchSavedArticles();
+    }, 1000);
 
-    // Set up periodic refresh
-    const refreshInterval = setInterval(fetchSavedArticles, 30000); // Refresh every 30 seconds
+    // Set up periodic refresh with longer interval
+    const refreshInterval = setInterval(fetchSavedArticles, 60000); // 1 minute
 
-    return () => clearInterval(refreshInterval);
+    return () => {
+      clearTimeout(initialFetchTimeout);
+      clearInterval(refreshInterval);
+    };
   }, [user, token, navigate, fetchSavedArticles]);
 
   const handleRemoveArticle = async (article) => {
+    if (!user?._id || !token) {
+      navigate("/");
+      return;
+    }
+
     try {
       await api.post("/auth/removeArticle", {
         userId: user._id,
         articleUrl: article.url
       }, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache'
         },
-        timeout: 5000 // 5 second timeout
+        timeout: 5000
       });
 
       setSavedArticles(current => 
@@ -147,6 +146,7 @@ const SavedArticles = () => {
         sessionStorage.removeItem("token");
         navigate("/");
       }
+      // Silently handle other errors
     }
   };
 

@@ -7,44 +7,14 @@ import axios from "axios";
 const api = axios.create({
   baseURL: 'https://flare48-j45i.onrender.com',
   withCredentials: true,
-  timeout: 30000, // Increased timeout
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   }
 });
 
-// Circuit breaker state
-let isCircuitOpen = false;
-let lastHealthCheck = 0;
-const HEALTH_CHECK_INTERVAL = 10000; // 10 seconds
-const CIRCUIT_RESET_TIMEOUT = 30000; // 30 seconds
-
-// Track failed attempts to prevent excessive retries
-let failedAttempts = 0;
-const MAX_FAILED_ATTEMPTS = 3;
-const RETRY_RESET_TIMEOUT = 60000; // 1 minute
-
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  response => {
-    failedAttempts = 0;
-    isCircuitOpen = false;
-    return response;
-  },
-  error => {
-    // Only log unexpected server errors or network issues
-    if (error.code === 'ERR_NETWORK' || (error.response?.status && error.response.status >= 500)) {
-      console.error('API Error:', {
-        type: error.code || error.response?.status,
-        url: error.config?.url?.split('?')[0] // Log URL without query params
-      });
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Get user from session storage
+// Enhanced user data validation
 const getUserData = () => {
   try {
     const userData = sessionStorage.getItem("user");
@@ -55,8 +25,18 @@ const getUserData = () => {
     }
 
     const parsedUser = JSON.parse(userData);
-    if (!parsedUser?._id) {
-      console.error("Invalid user data in session storage");
+    
+    // Strict validation of user data
+    if (!parsedUser || typeof parsedUser !== 'object' || !parsedUser._id) {
+      console.error("Invalid or incomplete user data:", parsedUser);
+      sessionStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      return { user: null, token: null };
+    }
+
+    // Validate token format (should be a non-empty string)
+    if (typeof token !== 'string' || !token.trim()) {
+      console.error("Invalid token format");
       sessionStorage.removeItem("user");
       sessionStorage.removeItem("token");
       return { user: null, token: null };
@@ -79,99 +59,33 @@ const NewsPage = () => {
     error: null
   });
   const navigate = useNavigate();
-
-  // Get user data using the new function
+  
+  // Get user data with strict validation
   const { user, token } = getUserData();
-
-  // Check server health
-  const checkServerHealth = useCallback(async () => {
-    // Don't check health if circuit is open
-    if (isCircuitOpen) {
-      return false;
+  
+  // Immediately redirect if no valid user data
+  useEffect(() => {
+    if (!user?._id || !token) {
+      navigate("/");
     }
-
-    // Implement rate limiting for health checks
-    const now = Date.now();
-    if (now - lastHealthCheck < HEALTH_CHECK_INTERVAL) {
-      return !isCircuitOpen; // Return last known state
-    }
-
-    try {
-      lastHealthCheck = now;
-      const response = await api.get('/health');
-      const isHealthy = response.data.status === 'healthy' && response.data.mongo === 'connected';
-      
-      if (!isHealthy) {
-        isCircuitOpen = true;
-        setTimeout(() => {
-          isCircuitOpen = false;
-        }, CIRCUIT_RESET_TIMEOUT);
-      }
-      
-      return isHealthy;
-    } catch (error) {
-      isCircuitOpen = true;
-      setTimeout(() => {
-        isCircuitOpen = false;
-      }, CIRCUIT_RESET_TIMEOUT);
-      return false;
-    }
-  }, []);
-
-  const fetchArticles = useCallback(async () => {
-    try {
-      // Always check cache first
-      const cachedData = localStorage.getItem('cachedArticles');
-      if (cachedData) {
-        const { articles: cachedArticles, timestamp } = JSON.parse(cachedData);
-        const cacheAge = Date.now() - timestamp;
-        
-        // Use cache if it's less than 30 minutes old
-        if (cacheAge < 30 * 60 * 1000) {
-          setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
-          return;
-        }
-      }
-
-      const apiKey = "01008499182045707c100247f657ba5c";
-      const currentDate = new Date();
-      const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
-      const formattedDate = pastDate.toISOString();
-
-      const response = await axios.get(
-        `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`,
-        { timeout: 10000 }
-      );
-      
-      if (response?.data?.articles) {
-        // Cache the new articles with timestamp
-        localStorage.setItem('cachedArticles', JSON.stringify({
-          articles: response.data.articles,
-          timestamp: Date.now()
-        }));
-        
-        setState(prev => ({ ...prev, articles: response.data.articles, isLoading: false }));
-      }
-    } catch (error) {
-      // If we have cached articles, use them as fallback silently
-      const cachedData = localStorage.getItem('cachedArticles');
-      if (cachedData) {
-        const { articles: cachedArticles } = JSON.parse(cachedData);
-        setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
-      } else {
-        setState(prev => ({ ...prev, isLoading: false }));
-      }
-    }
-  }, []);
+  }, [user, token, navigate]);
 
   const fetchSavedArticles = useCallback(async () => {
-    if (!user?._id || !token) return;
+    // Double check user data before making request
+    const { user: currentUser, token: currentToken } = getUserData();
+    if (!currentUser?._id || !currentToken) {
+      navigate("/");
+      return;
+    }
 
     try {
       const response = await api.get(
-        `/auth/saved-articles/${user._id}`,
+        `/auth/saved-articles/${currentUser._id}`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            'Authorization': `Bearer ${currentToken}`,
+            'Cache-Control': 'no-cache'
+          },
           timeout: 5000
         }
       );
@@ -186,7 +100,7 @@ const NewsPage = () => {
         navigate("/");
       }
     }
-  }, [user, token, navigate]);
+  }, [navigate]);
 
   useEffect(() => {
     if (!user || !token) {
@@ -197,29 +111,37 @@ const NewsPage = () => {
     // Load cached articles immediately if available
     const cachedData = localStorage.getItem('cachedArticles');
     if (cachedData) {
-      const { articles: cachedArticles } = JSON.parse(cachedData);
-      setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
+      try {
+        const { articles: cachedArticles } = JSON.parse(cachedData);
+        setState(prev => ({ ...prev, articles: cachedArticles, isLoading: false }));
+      } catch (e) {
+        localStorage.removeItem('cachedArticles');
+      }
     }
 
-    // Fetch fresh data
-    Promise.all([
-      fetchArticles(),
-      fetchSavedArticles()
-    ]).finally(() => {
-      setState(prev => ({ ...prev, isLoading: false }));
-    });
+    // Initial fetch with delay to prevent resource exhaustion
+    const initialFetchTimeout = setTimeout(() => {
+      fetchArticles();
+      fetchSavedArticles();
+    }, 1000);
 
-    // Set up refresh intervals
-    const articlesInterval = setInterval(fetchArticles, 5 * 60 * 1000);
-    const savedArticlesInterval = setInterval(fetchSavedArticles, 30 * 1000);
+    // Set up refresh intervals with longer periods
+    const articlesInterval = setInterval(fetchArticles, 10 * 60 * 1000); // 10 minutes
+    const savedArticlesInterval = setInterval(fetchSavedArticles, 60 * 1000); // 1 minute
 
     return () => {
+      clearTimeout(initialFetchTimeout);
       clearInterval(articlesInterval);
       clearInterval(savedArticlesInterval);
     };
   }, [user, token, navigate, fetchArticles, fetchSavedArticles]);
 
   const handleSaveArticle = async (article) => {
+    if (!user?._id || !token) {
+      navigate("/");
+      return;
+    }
+
     try {
       const response = await api.post(
         "/auth/saveArticle",
@@ -233,7 +155,10 @@ const NewsPage = () => {
           },
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Cache-Control': 'no-cache'
+          },
           timeout: 5000
         }
       );
@@ -250,6 +175,7 @@ const NewsPage = () => {
         sessionStorage.removeItem("token");
         navigate("/");
       }
+      // Silently handle other errors to prevent UI disruption
     }
   };
 
