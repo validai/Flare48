@@ -76,7 +76,7 @@ const WelcomeHero = () => {
         console.log("Success:", data);
   
         sessionStorage.setItem("user", JSON.stringify({ 
-          _id: data.userId, 
+          _id: data.userId,
           username: data.username || formData.username, 
           email: formData.email 
         }));

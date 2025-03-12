@@ -15,10 +15,10 @@ const GoogleAuthCallback = () => {
     console.log("Received auth data:", { token, userId, username, email });
 
     if (token && userId && username) {
-      // Store user data in sessionStorage
+      // Store user data in sessionStorage with _id to match the structure
       sessionStorage.setItem('token', token);
       sessionStorage.setItem('user', JSON.stringify({
-        _id: userId,
+        _id: userId,  // Store userId as _id to match the structure
         username: username,
         email: email
       }));
