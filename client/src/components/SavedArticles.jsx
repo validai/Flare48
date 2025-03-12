@@ -1,6 +1,16 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: 'https://flare48-j45i.onrender.com',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+});
 
 const SavedArticles = () => {
   const [state, setState] = useState({
@@ -11,32 +21,106 @@ const SavedArticles = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load saved articles from local storage
-    try {
-      const savedData = localStorage.getItem('savedArticles');
-      if (savedData) {
-        const articles = JSON.parse(savedData);
-        setState(prev => ({
-          ...prev,
-          savedArticles: articles,
-          isLoading: false
-        }));
-      } else {
-        setState(prev => ({
-          ...prev,
-          savedArticles: [],
-          isLoading: false
+    const fetchSavedArticles = async () => {
+      try {
+        const userData = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+
+        console.log('Checking auth state:', {
+          hasUserData: !!userData,
+          hasToken: !!token
+        });
+
+        if (!userData || !token) {
+          console.log('No auth data found, redirecting to login');
+          setState(prev => ({ ...prev, isLoading: false }));
+          navigate('/');
+          return;
+        }
+
+        let user;
+        try {
+          user = JSON.parse(userData);
+          console.log('Parsed user data:', {
+            hasId: !!user._id,
+            email: user.email
+          });
+        } catch (e) {
+          console.error('Failed to parse user data:', e);
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          navigate('/');
+          return;
+        }
+        
+        if (!user._id) {
+          console.error('Invalid user data:', user);
+          setState(prev => ({ ...prev, isLoading: false }));
+          navigate('/');
+          return;
+        }
+
+        console.log('Fetching saved articles:', {
+          userId: user._id,
+          endpoint: `/auth/saved-articles/${user._id}`
+        });
+
+        const response = await api.get(`/auth/saved-articles/${user._id}`, {
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+
+        console.log('Saved articles response:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: response.data
+        });
+
+        if (response?.data?.savedArticles) {
+          console.log(`Found ${response.data.savedArticles.length} saved articles`);
+          setState(prev => ({
+            ...prev,
+            savedArticles: response.data.savedArticles,
+            isLoading: false
+          }));
+        } else {
+          console.warn('Invalid saved articles response format:', response.data);
+          setState(prev => ({ 
+            ...prev, 
+            isLoading: false,
+            error: "Invalid response format from server"
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching saved articles:', {
+          name: error.name,
+          message: error.message,
+          response: error.response ? {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          } : null
+        });
+
+        if (error.response?.status === 401) {
+          console.log('Authentication failed, clearing credentials');
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+          navigate('/');
+        }
+        setState(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          error: error.response?.data?.error || "Failed to fetch saved articles"
         }));
       }
-    } catch (error) {
-      console.error("Error loading saved articles:", error);
-      setState(prev => ({
-        ...prev,
-        error: "Failed to load saved articles",
-        isLoading: false
-      }));
-    }
-  }, []);
+    };
+
+    fetchSavedArticles();
+  }, [navigate]);
 
   if (state.isLoading) {
     return (
