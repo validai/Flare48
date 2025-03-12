@@ -129,7 +129,7 @@ const NewsPage = () => {
     }
   }, [user, token]); // Add dependencies
 
-  const fetchSavedArticles = useCallback(async () => {
+  const fetchSavedArticles = useCallback(async (retryCount = 0) => {
     if (!user?._id || !token) return; // Don't fetch if no user
 
     try {
@@ -143,14 +143,48 @@ const NewsPage = () => {
         }
       );
 
+      console.log("Saved articles response:", response.data);
+
       if (response?.data?.savedArticles) {
         setState(prev => ({ 
           ...prev, 
           savedArticles: response.data.savedArticles,
-          isLoading: false 
+          isLoading: false,
+          error: null
+        }));
+      } else {
+        console.error("Invalid response format:", response.data);
+        setState(prev => ({
+          ...prev,
+          error: "Failed to fetch saved articles: Invalid response format",
+          isLoading: false
         }));
       }
     } catch (error) {
+      console.error("Error fetching saved articles:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+
+      // Handle resource exhaustion with retry logic
+      if (error.message?.includes('ERR_INSUFFICIENT_RESOURCES') && retryCount < 3) {
+        const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff: 1s, 2s, 4s
+        console.log(`Retrying fetch after ${delay}ms (attempt ${retryCount + 1}/3)`);
+        
+        setTimeout(() => {
+          fetchSavedArticles(retryCount + 1);
+        }, delay);
+        
+        return;
+      }
+
+      setState(prev => ({
+        ...prev,
+        error: error.response?.data?.error || "Failed to fetch saved articles",
+        isLoading: false
+      }));
+
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
@@ -174,20 +208,25 @@ const NewsPage = () => {
       }
     }
 
-    // Fetch saved articles immediately
-    fetchSavedArticles();
+    // Initial data fetch with delay
+    const fetchInitialData = async () => {
+      try {
+        // Add a small delay before the first fetch
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await fetchSavedArticles();
+        await fetchArticles();
+      } catch (error) {
+        console.error("Error during initial data fetch:", error);
+      }
+    };
 
-    // Then fetch fresh articles with a slight delay
-    const initialFetchTimeout = setTimeout(() => {
-      fetchArticles();
-    }, 1000);
+    fetchInitialData();
 
     // Set up refresh intervals with longer periods
     const articlesInterval = setInterval(fetchArticles, 10 * 60 * 1000); // 10 minutes
-    const savedArticlesInterval = setInterval(fetchSavedArticles, 30 * 1000); // 30 seconds
+    const savedArticlesInterval = setInterval(fetchSavedArticles, 60 * 1000); // Increased to 60 seconds
 
     return () => {
-      clearTimeout(initialFetchTimeout);
       clearInterval(articlesInterval);
       clearInterval(savedArticlesInterval);
     };
@@ -209,11 +248,23 @@ const NewsPage = () => {
     }
 
     try {
+      const normalizedUrl = normalizeUrl(article.url);
+      
       console.log("Attempting to save article:", {
         userId: user._id,
         articleTitle: article.title,
-        articleUrl: article.url
+        articleUrl: normalizedUrl
       });
+
+      // Check if article is already saved
+      const isAlreadySaved = state.savedArticles.some(
+        savedArticle => normalizeUrl(savedArticle.url) === normalizedUrl
+      );
+
+      if (isAlreadySaved) {
+        console.log("Article already saved:", normalizedUrl);
+        return;
+      }
 
       // Ensure all required fields are present
       if (!article.title || !article.url) {
@@ -231,7 +282,7 @@ const NewsPage = () => {
           userId: user._id,
           article: {
             title: article.title,
-            url: article.url,
+            url: normalizedUrl, // Use normalized URL
             image: article.image || null,
             publishedAt: article.publishedAt || new Date().toISOString()
           }
@@ -250,6 +301,12 @@ const NewsPage = () => {
           ...prev,
           savedArticles: [...prev.savedArticles, response.data.savedArticle],
           error: null
+        }));
+      } else {
+        console.error("Invalid save response:", response.data);
+        setState(prev => ({
+          ...prev,
+          error: "Failed to save article: Invalid response"
         }));
       }
     } catch (error) {
