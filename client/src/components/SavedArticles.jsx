@@ -52,71 +52,77 @@ const getUserData = () => {
 };
 
 const SavedArticles = () => {
-  const [savedArticles, setSavedArticles] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [state, setState] = useState({
+    savedArticles: [],
+    isLoading: true,
+    error: null
+  });
   const navigate = useNavigate();
 
   // Get user data with strict validation
   const { user, token } = getUserData();
 
-  // Immediately redirect if no valid user data
-  useEffect(() => {
-    if (!user?._id || !token) {
-      navigate("/");
-    }
-  }, [user, token, navigate]);
-
   const fetchSavedArticles = useCallback(async () => {
-    // Double check user data before making request
-    const { user: currentUser, token: currentToken } = getUserData();
-    if (!currentUser?._id || !currentToken) {
+    if (!user?._id || !token) {
       navigate("/");
       return;
     }
 
     try {
-      const response = await api.get(`/auth/saved-articles/${currentUser._id}`, {
-        headers: {
-          'Authorization': `Bearer ${currentToken}`,
-          'Cache-Control': 'no-cache'
-        },
-        timeout: 5000
-      });
+      console.log("Fetching saved articles for user:", user._id);
+      const response = await api.get(
+        `/auth/saved-articles/${user._id}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      console.log("Saved articles response:", response.data);
 
       if (response?.data?.savedArticles) {
-        setSavedArticles(response.data.savedArticles);
+        setState(prev => ({ 
+          ...prev, 
+          savedArticles: response.data.savedArticles,
+          isLoading: false,
+          error: null
+        }));
       }
     } catch (error) {
+      console.error("Error fetching saved articles:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+
+      setState(prev => ({
+        ...prev,
+        error: error.response?.data?.error || "Failed to fetch saved articles",
+        isLoading: false
+      }));
+
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
       }
-      // Silently handle other errors
-    } finally {
-      setIsLoading(false);
     }
-  }, [navigate]);
+  }, [user, token, navigate]);
 
+  // Fetch saved articles on component mount and when user/token changes
   useEffect(() => {
-    if (!user || !token) {
+    if (!user?._id || !token) {
       navigate("/");
       return;
     }
 
-    // Initial fetch with delay
-    const initialFetchTimeout = setTimeout(() => {
-      fetchSavedArticles();
-    }, 1000);
+    fetchSavedArticles();
 
-    // Set up periodic refresh with longer interval
-    const refreshInterval = setInterval(fetchSavedArticles, 60000); // 1 minute
+    // Refresh saved articles periodically
+    const refreshInterval = setInterval(fetchSavedArticles, 30000); // Every 30 seconds
 
-    return () => {
-      clearTimeout(initialFetchTimeout);
-      clearInterval(refreshInterval);
-    };
+    return () => clearInterval(refreshInterval);
   }, [user, token, navigate, fetchSavedArticles]);
 
   const handleRemoveArticle = async (article) => {
@@ -126,31 +132,45 @@ const SavedArticles = () => {
     }
 
     try {
-      await api.post("/auth/removeArticle", {
-        userId: user._id,
-        articleUrl: article.url
-      }, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Cache-Control': 'no-cache'
+      console.log("Removing article:", article.url);
+      await api.post(
+        "/auth/removeArticle",
+        {
+          userId: user._id,
+          articleUrl: article.url
         },
-        timeout: 5000
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+
+      setState(prev => ({
+        ...prev,
+        savedArticles: prev.savedArticles.filter(savedArticle => savedArticle.url !== article.url),
+        error: null
+      }));
+    } catch (error) {
+      console.error("Error removing article:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
       });
 
-      setSavedArticles(current => 
-        current.filter(savedArticle => savedArticle.url !== article.url)
-      );
-    } catch (error) {
+      setState(prev => ({
+        ...prev,
+        error: error.response?.data?.error || "Failed to remove article"
+      }));
+
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
       }
-      // Silently handle other errors
     }
   };
 
-  // If not authenticated, show message and redirect
   if (!user || !token) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -168,37 +188,12 @@ const SavedArticles = () => {
     );
   }
 
-  if (isLoading) {
+  if (state.isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">Loading saved articles...</h2>
           <p className="text-gray-600">Please wait while we fetch your saved articles.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4 text-red-600">Error</h2>
-          <p className="text-gray-600">{error}</p>
-          <div className="mt-4 space-y-2">
-            <button
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 w-full"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={() => navigate("/news")}
-              className="px-4 py-2 border border-black text-black rounded-lg hover:bg-gray-100 w-full"
-            >
-              Back to News
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -214,13 +209,16 @@ const SavedArticles = () => {
       </button>
 
       <h1 className="text-4xl font-bold text-center text-gray-900">Saved Articles</h1>
-      <p className="mt-4 text-lg text-center text-gray-600">
-        Here are the articles you've saved.
-      </p>
+      
+      {state.error && (
+        <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {state.error}
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        {savedArticles.length > 0 ? (
-          savedArticles.map((article, index) => (
+        {state.savedArticles.length > 0 ? (
+          state.savedArticles.map((article, index) => (
             <div
               key={index}
               className="relative block p-4 bg-white dark:bg-neutral-100 border border-neutral-700 shadow-lg rounded-2xl hover:shadow-xl transition transform hover:-translate-y-1"
@@ -234,13 +232,16 @@ const SavedArticles = () => {
                 {article.title}
               </h3>
               <p className="mt-2 text-sm text-black dark:text-black">
-                {new Date(article.publishedAt).toLocaleString()}
+                Saved on: {new Date(article.savedAt).toLocaleString()}
+              </p>
+              <p className="mt-1 text-sm text-black dark:text-black">
+                Published: {new Date(article.publishedAt).toLocaleString()}
               </p>
               <a
                 href={article.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 text-sm text-blue-600 hover:underline"
+                className="mt-4 text-sm text-blue-600 hover:underline block"
               >
                 Read Full Article
               </a>

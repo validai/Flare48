@@ -199,6 +199,16 @@ const NewsPage = () => {
         articleUrl: article.url
       });
 
+      // Ensure all required fields are present
+      if (!article.title || !article.url) {
+        console.error("Missing required article fields:", article);
+        setState(prev => ({
+          ...prev,
+          error: "Invalid article data: missing required fields"
+        }));
+        return;
+      }
+
       const response = await api.post(
         "/auth/saveArticle",
         {
@@ -206,9 +216,9 @@ const NewsPage = () => {
           article: {
             title: article.title,
             url: article.url,
-            image: article.image,
-            publishedAt: article.publishedAt,
-          },
+            image: article.image || null,
+            publishedAt: article.publishedAt || new Date().toISOString()
+          }
         },
         {
           headers: { 
@@ -222,7 +232,8 @@ const NewsPage = () => {
       if (response?.data?.savedArticle) {
         setState(prev => ({
           ...prev,
-          savedArticles: [...prev.savedArticles, response.data.savedArticle]
+          savedArticles: [...prev.savedArticles, response.data.savedArticle],
+          error: null
         }));
       }
     } catch (error) {
@@ -231,6 +242,12 @@ const NewsPage = () => {
         data: error.response?.data,
         message: error.message
       });
+      
+      // Set error message in state
+      setState(prev => ({
+        ...prev,
+        error: error.response?.data?.error || "Failed to save article. Please try again."
+      }));
       
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
@@ -317,6 +334,12 @@ const NewsPage = () => {
   return (
     <div>
       <h1 className="text-4xl font-bold text-center text-gray-900">Latest News</h1>
+
+      {state.error && (
+        <div className="mx-8 mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {state.error}
+        </div>
+      )}
 
       <div className="m-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         {articles.map((article, index) => {
