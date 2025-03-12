@@ -37,10 +37,14 @@ const WelcomeHero = () => {
     setError("");
     setIsLoading(true);
   
-    const formData = {
+    // Create appropriate request data based on auth type
+    const formData = isSignup ? {
       email: e.target.email.value.trim(),
       password: e.target.password.value.trim(),
-      username: e.target.username?.value.trim(), 
+      username: e.target.username.value.trim()
+    } : {
+      email: e.target.email.value.trim(),
+      password: e.target.password.value.trim()
     };
   
     const backendUrl = "https://flare48-j45i.onrender.com";
