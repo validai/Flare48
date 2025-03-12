@@ -244,13 +244,27 @@ const NewsPage = () => {
   }, [state.isUserLoaded, fetchArticles, fetchSavedArticles]);
 
   const normalizeUrl = (url) => {
+    if (!url) return '';
     try {
-      // Remove query parameters and trailing slashes
-      return url.split('?')[0].replace(/\/$/, '');
+      // Remove protocol (http/https), 'www.', and trailing slashes
+      return url
+        .toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/$/, '')
+        .split('?')[0];
     } catch (e) {
-      return url;
+      return url.toLowerCase();
     }
   };
+
+  const isArticleSaved = useCallback((articleUrl, savedArticles) => {
+    if (!articleUrl || !savedArticles?.length) return false;
+    const normalizedArticleUrl = normalizeUrl(articleUrl);
+    return savedArticles.some(
+      savedArticle => normalizeUrl(savedArticle.url) === normalizedArticleUrl
+    );
+  }, []);
 
   const handleSaveArticle = async (article) => {
     if (!user?._id || !token) {
@@ -258,34 +272,36 @@ const NewsPage = () => {
       return;
     }
 
+    const normalizedUrl = normalizeUrl(article.url);
+    
+    // Check if article is already saved
+    if (isArticleSaved(article.url, state.savedArticles)) {
+      console.log("Article is already saved:", normalizedUrl);
+      return;
+    }
+
     try {
-      const normalizedUrl = normalizeUrl(article.url);
-      
       console.log("Attempting to save article:", {
         userId: user._id,
         articleTitle: article.title,
         articleUrl: normalizedUrl
       });
 
-      // Check if article is already saved
-      const isAlreadySaved = state.savedArticles.some(
-        savedArticle => normalizeUrl(savedArticle.url) === normalizedUrl
-      );
-
-      if (isAlreadySaved) {
-        console.log("Article already saved:", normalizedUrl);
-        return;
-      }
-
       // Ensure all required fields are present
       if (!article.title || !article.url) {
         console.error("Missing required article fields:", article);
-        setState(prev => ({
-          ...prev,
-          error: "Invalid article data: missing required fields"
-        }));
         return;
       }
+
+      // Optimistically update UI
+      setState(prev => ({
+        ...prev,
+        savedArticles: [...prev.savedArticles, {
+          ...article,
+          url: normalizedUrl,
+          savedAt: new Date().toISOString()
+        }]
+      }));
 
       const response = await api.post(
         "/auth/saveArticle",
@@ -293,7 +309,7 @@ const NewsPage = () => {
           userId: user._id,
           article: {
             title: article.title,
-            url: normalizedUrl, // Use normalized URL
+            url: normalizedUrl,
             image: article.image || null,
             publishedAt: article.publishedAt || new Date().toISOString()
           }
@@ -307,17 +323,11 @@ const NewsPage = () => {
       
       console.log("Save article response:", response.data);
       
-      if (response?.data?.savedArticle) {
+      if (!response?.data?.savedArticle) {
+        // Revert optimistic update if save failed
         setState(prev => ({
           ...prev,
-          savedArticles: [...prev.savedArticles, response.data.savedArticle],
-          error: null
-        }));
-      } else {
-        console.error("Invalid save response:", response.data);
-        setState(prev => ({
-          ...prev,
-          error: "Failed to save article: Invalid response"
+          savedArticles: prev.savedArticles.filter(a => normalizeUrl(a.url) !== normalizedUrl)
         }));
       }
     } catch (error) {
@@ -327,9 +337,10 @@ const NewsPage = () => {
         message: error.message
       });
       
+      // Revert optimistic update on error
       setState(prev => ({
         ...prev,
-        error: error.response?.data?.error || "Failed to save article. Please try again."
+        savedArticles: prev.savedArticles.filter(a => normalizeUrl(a.url) !== normalizedUrl)
       }));
       
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -341,17 +352,27 @@ const NewsPage = () => {
   };
 
   const handleRemoveArticle = async (article) => {
+    if (!user?._id || !token) {
+      navigate("/");
+      return;
+    }
+
+    const normalizedUrl = normalizeUrl(article.url);
+
     try {
-      console.log("Attempting to remove article:", {
-        userId: user._id,
-        articleUrl: article.url
-      });
+      // Optimistically update UI
+      setState(prev => ({
+        ...prev,
+        savedArticles: prev.savedArticles.filter(
+          savedArticle => normalizeUrl(savedArticle.url) !== normalizedUrl
+        )
+      }));
 
       const response = await api.post(
         "/auth/removeArticle",
         {
           userId: user._id,
-          articleUrl: article.url
+          articleUrl: normalizedUrl
         },
         {
           headers: { 
@@ -360,20 +381,11 @@ const NewsPage = () => {
         }
       );
 
-      if (response.status === 200) {
-        console.log("Article removed successfully");
+      if (response.status !== 200) {
+        // Revert optimistic update if remove failed
         setState(prev => ({
           ...prev,
-          savedArticles: prev.savedArticles.filter(
-            savedArticle => normalizeUrl(savedArticle.url) !== normalizeUrl(article.url)
-          ),
-          error: null
-        }));
-      } else {
-        console.error("Failed to remove article:", response.data);
-        setState(prev => ({
-          ...prev,
-          error: "Failed to remove article. Please try again."
+          savedArticles: [...prev.savedArticles, article]
         }));
       }
     } catch (error) {
@@ -383,9 +395,10 @@ const NewsPage = () => {
         message: error.message
       });
 
+      // Revert optimistic update on error
       setState(prev => ({
         ...prev,
-        error: error.response?.data?.error || "Failed to remove article. Please try again."
+        savedArticles: [...prev.savedArticles, article]
       }));
 
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -454,15 +467,11 @@ const NewsPage = () => {
       )}
 
       <div className="m-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        {articles.map((article, index) => {
-          // Normalize URLs before comparison
-          const normalizedArticleUrl = normalizeUrl(article.url);
-          const isSaved = savedArticles.some(
-            (savedArticle) => normalizeUrl(savedArticle.url) === normalizedArticleUrl
-          );
+        {articles.map((article) => {
+          const isSaved = isArticleSaved(article.url, savedArticles);
 
           return (
-            <div key={normalizedArticleUrl} className="relative flex flex-col">
+            <div key={normalizeUrl(article.url)} className="relative flex flex-col">
               <a
                 href={article.url}
                 target="_blank"
@@ -487,6 +496,7 @@ const NewsPage = () => {
               <button
                 onClick={(e) => {
                   e.preventDefault();
+                  e.stopPropagation();
                   isSaved ? handleRemoveArticle(article) : handleSaveArticle(article);
                 }}
                 className={`absolute bottom-4 right-4 p-2 transition-colors duration-300 hover:scale-110 ease-in-out 
