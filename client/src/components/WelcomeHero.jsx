@@ -2,13 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const WelcomeHero = () => {
-  console.log("WelcomeHero component rendered");
-
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isSignup, setIsSignup] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const images = [
@@ -18,256 +12,38 @@ const WelcomeHero = () => {
   ];
 
   useEffect(() => {
-    console.log("useEffect triggered - Image Slideshow");
     const intervalId = setInterval(() => {
       setCurrentImageIndex((prevIndex) => (prevIndex + 1) % images.length);
     }, 5000);
     return () => clearInterval(intervalId);
   }, []);
 
-  const toggleModal = (type) => {
-    console.log(`toggleModal triggered - Type: ${type}`);
-    setIsSignup(type === "signup");
-    setIsModalOpen(!isModalOpen);
-    setError("");
-  };
-
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setIsLoading(true);
-  
-    // Create appropriate request data based on auth type
-    const formData = isSignup ? {
-      email: e.target.email.value.trim(),
-      password: e.target.password.value.trim(),
-      username: e.target.username.value.trim()
-    } : {
-      email: e.target.email.value.trim(),
-      password: e.target.password.value.trim()
-    };
-  
-    const backendUrl = "https://flare48-j45i.onrender.com";
-    const REGISTER_URL = `${backendUrl}/auth/register`;
-    const LOGIN_URL = `${backendUrl}/auth/login`;
-    
-    try {
-      const endpoint = isSignup ? REGISTER_URL : LOGIN_URL;
-      
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-        credentials: 'include'
-      });
-    
-      let data;
-      try {
-        data = await response.json();
-      } catch (err) {
-        setError("Server response was not in the expected format");
-        setIsLoading(false);
-        return;
-      }
-    
-      if (response.ok && data) {
-        // Validate required fields
-        if (!data.userId || !data.token) {
-          setError("Invalid response from server: missing required fields");
-          setIsLoading(false);
-          return;
-        }
-
-        // Create user object with strict validation
-        const userData = {
-          _id: data.userId,
-          username: data.username || formData.username,
-          email: formData.email
-        };
-
-        // Validate user object
-        if (!userData._id || typeof userData._id !== 'string' || 
-            !userData.email || typeof userData.email !== 'string') {
-          setError("Invalid user data received from server");
-          setIsLoading(false);
-          return;
-        }
-
-        // Validate token
-        if (typeof data.token !== 'string' || !data.token.trim()) {
-          setError("Invalid authentication token received");
-          setIsLoading(false);
-          return;
-        }
-
-        try {
-          // Store validated data
-          sessionStorage.setItem("user", JSON.stringify(userData));
-          sessionStorage.setItem("token", data.token);
-          navigate("/news");
-        } catch (storageError) {
-          setError("Failed to save authentication data. Please try again.");
-          setIsLoading(false);
-          return;
-        }
-      } else {
-        const errorMessage = data?.error || data?.message || 
-          `Failed to ${isSignup ? 'sign up' : 'log in'}. Please try again.`;
-        setError(errorMessage);
-      }
-    } catch (error) {
-      if (!navigator.onLine) {
-        setError("No internet connection. Please check your network and try again.");
-      } else {
-        setError("Unable to connect to the server. Please try again later.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-
-  const handleGoogleAuth = () => {
-    console.log("Google OAuth button clicked");
-    const backendUrl = "https://flare48-j45i.onrender.com";
-    // Use the frontend URL for redirect
-    const redirectUri = window.location.origin + "/auth/google/callback";
-    window.location.href = `${backendUrl}/auth/google?redirect_uri=${encodeURIComponent(redirectUri)}`;
-  };
-  
-  
-
   return (
-    <section className="container mx-auto px-6 py-16 md:py-24">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-        <div className="text-center md:text-left">
-          <h1 className="text-5xl md:text-6xl font-extrabold text-black leading-tight">
-            Welcome to <span className="text-primary-500">Flare48</span>
-          </h1>
-          <p className="mt-4 text-lg md:text-xl text-black leading-relaxed max-w-lg mx-auto md:mx-0">
-            Your go-to source for the latest news from the past 48 hours.
-          </p>
-          <div className="mt-6 flex gap-4 justify-center md:justify-start">
-            <button
-              className="px-6 py-3 bg-black text-white rounded-lg hover:bg-neutral-800 transition"
-              onClick={() => toggleModal("signup")}
-            >
-              Get Started
-            </button>
-            <button
-              className="px-6 py-3 bg-white text-black border-2 border-black rounded-lg hover:bg-neutral-200 transition"
-              onClick={() => toggleModal("login")}
-            >
-              Login
-            </button>
-          </div>
-        </div>
-        <div className="flex justify-center md:justify-end">
-          <img
-            src={images[currentImageIndex]}
-            alt="News"
-            className="rounded-xl shadow-lg w-full h-[350px] md:h-[450px] lg:h-[550px] transition-all duration-500 object-cover"
-          />
-        </div>
+    <section className="relative h-screen flex items-center justify-center overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <img
+          src={images[currentImageIndex]}
+          alt="News background"
+          className="w-full h-full object-cover transition-opacity duration-1000"
+        />
+        <div className="absolute inset-0 bg-black/50" />
       </div>
 
-      {isModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-    <div className="bg-white p-8 rounded-lg shadow-xl max-w-sm w-full relative">
-      <h2 className="text-2xl font-bold mb-4 text-black">
-        {isSignup ? "Sign Up" : "Login"}
-      </h2>
-
-      {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleFormSubmit}>
-        {isSignup && (
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-black" htmlFor="username">
-              Username
-            </label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-              placeholder="Enter your username"
-              autoComplete="username"
-              required
-            />
-          </div>
-        )}
-
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-black" htmlFor="email">
-            Email
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-            placeholder="Enter your email"
-            autoComplete="email"
-            required
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-semibold text-black" htmlFor="password">
-            Password
-          </label>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            className="w-full p-3 mt-2 border border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-            placeholder="Enter your password"
-            autoComplete="current-password"
-            required
-          />
-        </div>
-
+      <div className="relative z-10 text-center text-white px-4">
+        <h1 className="text-5xl md:text-6xl font-bold mb-6">
+          Stay Informed with Flare48
+        </h1>
+        <p className="text-xl md:text-2xl mb-8 max-w-2xl mx-auto">
+          Your source for the latest news and updates from around the world.
+          Get real-time coverage of breaking stories.
+        </p>
         <button
-          type="submit"
-          disabled={isLoading}
-          className={`w-full py-3 bg-black text-white rounded-lg transition ${
-            isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-800'
-          }`}
+          onClick={() => navigate("/news")}
+          className="px-8 py-3 bg-white text-black rounded-lg text-lg font-semibold hover:bg-neutral-200 transition"
         >
-          {isLoading ? 'Please wait...' : (isSignup ? "Sign Up" : "Log In")}
+          Browse News
         </button>
-      </form>
-
-      <button
-        type="button"
-        className={`w-full py-3 mt-4 bg-neutral-600 text-white rounded-lg transition ${
-          isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-neutral-700'
-        }`}
-        onClick={handleGoogleAuth}
-        disabled={isLoading}
-      >
-        Continue with Google
-      </button>
-
-      <button
-        type="button"
-        className="w-full py-2 mt-4 text-black hover:text-neutral-600 text-sm"
-        onClick={() => setIsModalOpen(false)}
-        disabled={isLoading}
-      >
-        Close
-      </button>
-    </div>
-  </div>
-)}
-
+      </div>
     </section>
   );
 };

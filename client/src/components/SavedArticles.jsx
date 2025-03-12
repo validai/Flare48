@@ -1,55 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-
-// Create axios instance with default config
-const api = axios.create({
-  baseURL: 'https://flare48-j45i.onrender.com',
-  withCredentials: true,
-  timeout: 10000,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  }
-});
-
-// Enhanced user data validation
-const getUserData = () => {
-  try {
-    const userData = sessionStorage.getItem("user");
-    const token = sessionStorage.getItem("token");
-    
-    if (!userData || !token) {
-      return { user: null, token: null };
-    }
-
-    const parsedUser = JSON.parse(userData);
-    
-    // Strict validation of user data
-    if (!parsedUser || typeof parsedUser !== 'object' || !parsedUser._id) {
-      console.error("Invalid or incomplete user data:", parsedUser);
-      sessionStorage.removeItem("user");
-      sessionStorage.removeItem("token");
-      return { user: null, token: null };
-    }
-
-    // Validate token format (should be a non-empty string)
-    if (typeof token !== 'string' || !token.trim()) {
-      console.error("Invalid token format");
-      sessionStorage.removeItem("user");
-      sessionStorage.removeItem("token");
-      return { user: null, token: null };
-    }
-
-    return { user: parsedUser, token };
-  } catch (error) {
-    console.error("Error parsing user data:", error);
-    sessionStorage.removeItem("user");
-    sessionStorage.removeItem("token");
-    return { user: null, token: null };
-  }
-};
 
 const SavedArticles = () => {
   const [state, setState] = useState({
@@ -59,230 +10,33 @@ const SavedArticles = () => {
   });
   const navigate = useNavigate();
 
-  // Get user data with strict validation
-  const { user, token } = getUserData();
-
-  const fetchSavedArticles = useCallback(async () => {
-    if (!user?._id || !token) {
-      navigate("/");
-      return;
-    }
-
-    try {
-      console.log("Fetching saved articles for user:", user._id);
-      const response = await api.get(
-        `/auth/saved-articles/${user._id}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      console.log("Saved articles response:", response.data);
-
-      if (response?.data?.savedArticles) {
-        setState(prev => ({ 
-          ...prev, 
-          savedArticles: response.data.savedArticles,
-          isLoading: false,
-          error: null
-        }));
-      }
-    } catch (error) {
-      console.error("Error fetching saved articles:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-
-      setState(prev => ({
-        ...prev,
-        error: error.response?.data?.error || "Failed to fetch saved articles",
-        isLoading: false
-      }));
-
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        sessionStorage.removeItem("user");
-        sessionStorage.removeItem("token");
-        navigate("/");
-      }
-    }
-  }, [user, token, navigate]);
-
-  // Fetch saved articles only on component mount and when user/token changes
   useEffect(() => {
-    if (!user?._id || !token) {
-      navigate("/");
-      return;
-    }
-
-    let isMounted = true;
-
-    const fetchData = async () => {
-      try {
-        // Check cache first
-        const cachedData = localStorage.getItem('savedArticlesCache');
-        if (cachedData) {
-          const { articles, timestamp } = JSON.parse(cachedData);
-          const cacheAge = Date.now() - timestamp;
-          // Use cache if it's less than 5 minutes old
-          if (cacheAge < 5 * 60 * 1000) {
-            setState(prev => ({ 
-              ...prev, 
-              savedArticles: articles,
-              isLoading: false,
-              error: null
-            }));
-            return;
-          }
-        }
-
-        // If cache is old or doesn't exist, fetch new data
-        const response = await api.get(
-          `/auth/saved-articles/${user._id}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          }
-        );
-
-        if (response?.data?.savedArticles && isMounted) {
-          // Update cache
-          localStorage.setItem('savedArticlesCache', JSON.stringify({
-            articles: response.data.savedArticles,
-            timestamp: Date.now()
-          }));
-
-          setState(prev => ({ 
-            ...prev, 
-            savedArticles: response.data.savedArticles,
-            isLoading: false,
-            error: null
-          }));
-        }
-      } catch (error) {
-        console.error("Error fetching saved articles:", {
-          status: error.response?.status,
-          data: error.response?.data,
-          message: error.message
-        });
-
-        if (isMounted) {
-          setState(prev => ({
-            ...prev,
-            error: error.response?.data?.error || "Failed to fetch saved articles",
-            isLoading: false
-          }));
-
-          if (error.response?.status === 401 || error.response?.status === 403) {
-            sessionStorage.removeItem("user");
-            sessionStorage.removeItem("token");
-            navigate("/");
-          }
-        }
-      }
-    };
-
-    fetchData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user, token, navigate]);
-
-  const normalizeUrl = (url) => {
+    // Load saved articles from local storage
     try {
-      // Remove query parameters and trailing slashes
-      return url.split('?')[0].replace(/\/$/, '');
-    } catch (e) {
-      return url;
-    }
-  };
-
-  const handleRemoveArticle = async (article) => {
-    if (!user?._id || !token) {
-      navigate("/");
-      return;
-    }
-
-    try {
-      console.log("Removing article:", article.url);
-      const response = await api.post(
-        "/auth/removeArticle",
-        {
-          userId: user._id,
-          articleUrl: normalizeUrl(article.url)
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        }
-      );
-
-      if (response.status === 200) {
-        console.log("Article removed successfully");
-        // Update state and cache with normalized URLs
-        const updatedArticles = state.savedArticles.filter(
-          savedArticle => normalizeUrl(savedArticle.url) !== normalizeUrl(article.url)
-        );
-        
+      const savedData = localStorage.getItem('savedArticles');
+      if (savedData) {
+        const articles = JSON.parse(savedData);
         setState(prev => ({
           ...prev,
-          savedArticles: updatedArticles,
-          error: null
-        }));
-
-        // Update cache
-        localStorage.setItem('savedArticlesCache', JSON.stringify({
-          articles: updatedArticles,
-          timestamp: Date.now()
+          savedArticles: articles,
+          isLoading: false
         }));
       } else {
-        console.error("Failed to remove article:", response.data);
         setState(prev => ({
           ...prev,
-          error: "Failed to remove article. Please try again."
+          savedArticles: [],
+          isLoading: false
         }));
       }
     } catch (error) {
-      console.error("Error removing article:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-
+      console.error("Error loading saved articles:", error);
       setState(prev => ({
         ...prev,
-        error: error.response?.data?.error || "Failed to remove article"
+        error: "Failed to load saved articles",
+        isLoading: false
       }));
-
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        sessionStorage.removeItem("user");
-        sessionStorage.removeItem("token");
-        navigate("/");
-      }
     }
-  };
-
-  if (!user || !token) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
-          <p className="text-gray-600">Please log in to view your saved articles.</p>
-          <button
-            onClick={() => navigate("/")}
-            className="mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  }
+  }, []);
 
   if (state.isLoading) {
     return (
@@ -341,13 +95,6 @@ const SavedArticles = () => {
               >
                 Read Full Article
               </a>
-
-              <button
-                onClick={() => handleRemoveArticle(article)}
-                className="absolute bottom-4 right-4 p-2 text-black hover:scale-110"
-              >
-                <Trash2 size={25} />
-              </button>
             </div>
           ))
         ) : (

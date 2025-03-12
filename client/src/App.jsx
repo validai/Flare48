@@ -5,23 +5,9 @@ import NewsPage from "./components/NewsPage";
 import Footer from "./components/Footer";
 import SavedArticles from "./components/SavedArticles";
 import ThreeNewsSection from "./components/ThreeNewsSection";
-import GoogleAuthCallback from "./components/GoogleAuthCallback";
+// import GoogleAuthCallback from "./components/GoogleAuthCallback"; // Commented out Google auth
 
 function App() {
-  // Check if user is authenticated
-  const isAuthenticated = () => {
-    const user = sessionStorage.getItem("user");
-    return !!user;
-  };
-
-  // Protected Route wrapper component
-  const ProtectedRoute = ({ children }) => {
-    if (!isAuthenticated()) {
-      return <Navigate to="/" />;
-    }
-    return children;
-  };
-
   return (
     <>
       <Navbar />
@@ -32,17 +18,8 @@ function App() {
             <ThreeNewsSection />
           </>
         } />
-        <Route path="/auth/google/callback" element={<GoogleAuthCallback />} />
-        <Route path="/news" element={
-          <ProtectedRoute>
-            <NewsPage />
-          </ProtectedRoute>
-        } />
-        <Route path="/saved-articles" element={
-          <ProtectedRoute>
-            <SavedArticles />
-          </ProtectedRoute>
-        } />
+        <Route path="/news" element={<NewsPage />} />
+        <Route path="/saved-articles" element={<SavedArticles />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       <Footer />
