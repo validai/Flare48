@@ -191,6 +191,15 @@ const NewsPage = () => {
     };
   }, [state.isUserLoaded, fetchArticles, fetchSavedArticles]);
 
+  const normalizeUrl = (url) => {
+    try {
+      // Remove query parameters and trailing slashes
+      return url.split('?')[0].replace(/\/$/, '');
+    } catch (e) {
+      return url;
+    }
+  };
+
   const handleSaveArticle = async (article) => {
     if (!user?._id || !token) {
       navigate("/");
@@ -263,7 +272,12 @@ const NewsPage = () => {
 
   const handleRemoveArticle = async (article) => {
     try {
-      await api.post(
+      console.log("Attempting to remove article:", {
+        userId: user._id,
+        articleUrl: article.url
+      });
+
+      const response = await api.post(
         "/auth/removeArticle",
         {
           userId: user._id,
@@ -276,13 +290,29 @@ const NewsPage = () => {
         }
       );
 
+      if (response.status === 200) {
+        console.log("Article removed successfully");
+        // Fetch latest saved articles to ensure sync with database
+        await fetchSavedArticles();
+      } else {
+        console.error("Failed to remove article:", response.data);
+        setState(prev => ({
+          ...prev,
+          error: "Failed to remove article. Please try again."
+        }));
+      }
+    } catch (error) {
+      console.error("Error removing article:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+
       setState(prev => ({
         ...prev,
-        savedArticles: prev.savedArticles.filter(
-          savedArticle => savedArticle.url !== article.url
-        )
+        error: error.response?.data?.error || "Failed to remove article. Please try again."
       }));
-    } catch (error) {
+
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
@@ -350,12 +380,14 @@ const NewsPage = () => {
 
       <div className="m-8 grid grid-cols-1 md:grid-cols-3 gap-6">
         {articles.map((article, index) => {
+          // Normalize URLs before comparison
+          const normalizedArticleUrl = normalizeUrl(article.url);
           const isSaved = savedArticles.some(
-            (savedArticle) => savedArticle.url === article.url
+            (savedArticle) => normalizeUrl(savedArticle.url) === normalizedArticleUrl
           );
 
           return (
-            <div key={index} className="relative flex flex-col">
+            <div key={normalizedArticleUrl} className="relative flex flex-col">
               <a
                 href={article.url}
                 target="_blank"

@@ -118,12 +118,16 @@ const SavedArticles = () => {
     }
 
     fetchSavedArticles();
-
-    // Refresh saved articles periodically
-    const refreshInterval = setInterval(fetchSavedArticles, 30000); // Every 30 seconds
-
-    return () => clearInterval(refreshInterval);
   }, [user, token, navigate, fetchSavedArticles]);
+
+  const normalizeUrl = (url) => {
+    try {
+      // Remove query parameters and trailing slashes
+      return url.split('?')[0].replace(/\/$/, '');
+    } catch (e) {
+      return url;
+    }
+  };
 
   const handleRemoveArticle = async (article) => {
     if (!user?._id || !token) {
@@ -133,11 +137,11 @@ const SavedArticles = () => {
 
     try {
       console.log("Removing article:", article.url);
-      await api.post(
+      const response = await api.post(
         "/auth/removeArticle",
         {
           userId: user._id,
-          articleUrl: article.url
+          articleUrl: normalizeUrl(article.url)
         },
         {
           headers: {
@@ -146,11 +150,23 @@ const SavedArticles = () => {
         }
       );
 
-      setState(prev => ({
-        ...prev,
-        savedArticles: prev.savedArticles.filter(savedArticle => savedArticle.url !== article.url),
-        error: null
-      }));
+      if (response.status === 200) {
+        console.log("Article removed successfully");
+        // Update state with normalized URLs
+        setState(prev => ({
+          ...prev,
+          savedArticles: prev.savedArticles.filter(
+            savedArticle => normalizeUrl(savedArticle.url) !== normalizeUrl(article.url)
+          ),
+          error: null
+        }));
+      } else {
+        console.error("Failed to remove article:", response.data);
+        setState(prev => ({
+          ...prev,
+          error: "Failed to remove article. Please try again."
+        }));
+      }
     } catch (error) {
       console.error("Error removing article:", {
         status: error.response?.status,

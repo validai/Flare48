@@ -200,19 +200,23 @@ export const saveArticle = async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Check if article already exists
+    // Normalize the URL before checking for duplicates
+    const normalizedUrl = normalizeUrl(article.url);
+
+    // Check if article already exists using normalized URL
     const articleExists = user.savedArticles.some(
-      savedArticle => savedArticle.url === article.url
+      savedArticle => normalizeUrl(savedArticle.url) === normalizedUrl
     );
 
     if (articleExists) {
-      console.log("❌ Article already saved:", article.url);
+      console.log("❌ Article already saved:", normalizedUrl);
       return res.status(400).json({ error: "Article already saved" });
     }
 
-    // Add savedAt timestamp
+    // Add savedAt timestamp and use normalized URL
     const articleToSave = {
       ...article,
+      url: normalizedUrl, // Store the normalized URL
       savedAt: new Date(),
       publishedAt: article.publishedAt || new Date()
     };
@@ -223,7 +227,7 @@ export const saveArticle = async (req, res) => {
 
     console.log("✅ Article saved successfully:", {
       userId,
-      articleUrl: article.url
+      articleUrl: normalizedUrl
     });
 
     res.status(200).json({ 
@@ -266,21 +270,76 @@ export const saveArticle = async (req, res) => {
   }
 };
 
+const normalizeUrl = (url) => {
+  try {
+    // Remove query parameters and trailing slashes
+    return url.split('?')[0].replace(/\/$/, '');
+  } catch (e) {
+    return url;
+  }
+};
+
 export const removeArticle = async (req, res) => {
   try {
+    console.log("🗑️ Removing article attempt:", {
+      userId: req.body.userId,
+      articleUrl: req.body.articleUrl
+    });
+
     const { userId, articleUrl } = req.body;
+
+    if (!userId || !articleUrl) {
+      console.log("❌ Missing required fields");
+      return res.status(400).json({
+        error: "Missing required fields",
+        details: {
+          userId: !userId ? "User ID is required" : null,
+          articleUrl: !articleUrl ? "Article URL is required" : null
+        }
+      });
+    }
 
     const user = await User.findById(userId);
     if (!user) {
+      console.log("❌ User not found:", userId);
       return res.status(404).json({ error: "User not found" });
     }
 
-    user.savedArticles = user.savedArticles.filter((article) => article.url !== articleUrl);
+    const normalizedUrlToRemove = normalizeUrl(articleUrl);
+    const initialLength = user.savedArticles.length;
+
+    user.savedArticles = user.savedArticles.filter((article) => 
+      normalizeUrl(article.url) !== normalizedUrlToRemove
+    );
+
+    if (user.savedArticles.length === initialLength) {
+      console.log("❌ Article not found:", normalizedUrlToRemove);
+      return res.status(404).json({ error: "Article not found in saved articles" });
+    }
+
     await user.save();
 
-    res.status(200).json({ message: "Article removed successfully", savedArticles: user.savedArticles });
+    console.log("✅ Article removed successfully:", {
+      userId,
+      articleUrl: normalizedUrlToRemove,
+      remainingArticles: user.savedArticles.length
+    });
+
+    res.status(200).json({ 
+      message: "Article removed successfully", 
+      savedArticles: user.savedArticles 
+    });
   } catch (error) {
-    console.error("Error removing article:", error);
-    res.status(500).json({ error: "Failed to remove article", details: error.message });
+    console.error("❌ Error removing article:", {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+
+    res.status(500).json({ 
+      error: "Failed to remove article", 
+      details: error.message 
+    });
   }
 };
