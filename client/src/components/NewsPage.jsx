@@ -28,54 +28,70 @@ const NewsPage = () => {
     // Array of API keys to try in sequence
     const apiKeys = [
       "227e827efba517c4a1b449b10d7bc2dd",
-      "01008499182045707c100247f657ba5c"
+      "01008499182045707c100247f657ba5c",
+      "b9e4c1c1b9b94b0d9d3f1f6c2f9e8d7" // Additional backup key
     ];
 
     let lastError = null;
+    let attempts = 0;
 
     // Try each API key until one works
     for (const apiKey of apiKeys) {
+      attempts++;
       try {
+        console.log(`Attempting to fetch news with API key ${attempts}...`);
+        
         const response = await axios.get(
-          `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${apiKey}`
+          `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${apiKey}`,
+          { timeout: 5000 } // Shorter timeout for faster fallback
         );
 
-        if (response?.data?.articles) {
+        if (response?.data?.articles?.length > 0) {
           const articles = response.data.articles.filter(article => 
             article.image && article.title && article.url
           );
 
-          localStorage.setItem('cachedArticles', JSON.stringify({
-            articles,
-            timestamp: Date.now()
-          }));
+          if (articles.length > 0) {
+            localStorage.setItem('cachedArticles', JSON.stringify({
+              articles,
+              timestamp: Date.now()
+            }));
 
-          setState(prev => ({ 
-            ...prev, 
-            articles,
-            isLoadingArticles: false,
-            error: null
-          }));
+            setState(prev => ({ 
+              ...prev, 
+              articles,
+              isLoadingArticles: false,
+              error: null
+            }));
 
-          // If successful, exit the function
-          return;
+            console.log(`Successfully fetched ${articles.length} articles with API key ${attempts}`);
+            return;
+          }
         }
+        
+        // If we get here, the response was successful but had no valid articles
+        throw new Error('No valid articles in response');
       } catch (error) {
-        console.error(`Error fetching articles with API key ${apiKey}:`, error?.response?.data || error);
+        const errorMessage = error?.response?.data?.message || error?.message || 'Unknown error';
+        console.error(`Error fetching articles with API key ${attempts}:`, errorMessage);
         lastError = error;
-        // Continue to next API key
+        
+        // Add delay between attempts
+        await new Promise(resolve => setTimeout(resolve, 1000));
         continue;
       }
     }
 
     // If all API keys failed, try to load from cache
+    console.log('All API attempts failed, trying cache...');
     let cachedArticles = [];
     try {
       const cachedData = localStorage.getItem('cachedArticles');
       if (cachedData) {
         const parsed = JSON.parse(cachedData);
-        if (parsed && Array.isArray(parsed.articles)) {
+        if (parsed && Array.isArray(parsed.articles) && parsed.articles.length > 0) {
           cachedArticles = parsed.articles;
+          console.log(`Successfully loaded ${cachedArticles.length} articles from cache`);
         }
       }
     } catch (e) {
@@ -87,35 +103,104 @@ const NewsPage = () => {
       articles: cachedArticles,
       isLoadingArticles: false,
       error: cachedArticles.length 
-        ? "Using cached articles. All API keys failed. Please try again later." 
-        : "Failed to load articles. All API attempts failed. Please try again later."
+        ? `Using cached articles. All ${attempts} API attempts failed. Will retry in background.` 
+        : `Failed to load articles. All ${attempts} API attempts failed. Please try again later.`
     }));
+
+    // If using cached articles, try to refresh in the background after a delay
+    if (cachedArticles.length > 0) {
+      setTimeout(() => {
+        fetchArticles().catch(console.error);
+      }, 30000); // Try again after 30 seconds
+    }
   }, []);
 
   const fetchSavedArticles = useCallback(async () => {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const token = localStorage.getItem('token');
-
-    if (!user?._id || !token) {
-      setState(prev => ({ ...prev, isLoadingSaved: false }));
-      return;
-    }
-
     try {
+      const userData = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+
+      console.log('Checking auth state:', {
+        hasUserData: !!userData,
+        hasToken: !!token
+      });
+
+      if (!userData || !token) {
+        console.log('No auth data found, redirecting to login');
+        setState(prev => ({ ...prev, isLoadingSaved: false }));
+        navigate('/');
+        return;
+      }
+
+      let user;
+      try {
+        user = JSON.parse(userData);
+        console.log('Parsed user data:', {
+          hasId: !!user._id,
+          email: user.email
+        });
+      } catch (e) {
+        console.error('Failed to parse user data:', e);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        navigate('/');
+        return;
+      }
+      
+      if (!user._id) {
+        console.error('Invalid user data:', user);
+        setState(prev => ({ ...prev, isLoadingSaved: false }));
+        navigate('/');
+        return;
+      }
+
+      console.log('Fetching saved articles:', {
+        userId: user._id,
+        endpoint: `/auth/saved-articles/${user._id}`
+      });
+
       const response = await api.get(`/auth/saved-articles/${user._id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log('Saved articles response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
       });
 
       if (response?.data?.savedArticles) {
+        console.log(`Found ${response.data.savedArticles.length} saved articles`);
         setState(prev => ({
           ...prev,
           savedArticles: response.data.savedArticles,
           isLoadingSaved: false
         }));
+      } else {
+        console.warn('Invalid saved articles response format:', response.data);
+        setState(prev => ({ 
+          ...prev, 
+          isLoadingSaved: false,
+          savedArticles: []
+        }));
       }
     } catch (error) {
-      console.error("Error fetching saved articles:", error);
+      console.error('Error fetching saved articles:', {
+        name: error.name,
+        message: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        } : null
+      });
+
       if (error.response?.status === 401) {
+        console.log('Authentication failed, clearing credentials');
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         navigate('/');
@@ -184,15 +269,47 @@ const NewsPage = () => {
   }, [fetchArticles, fetchSavedArticles]);
 
   const handleSaveArticle = async (article) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const token = localStorage.getItem('token');
-
-    if (!user?._id || !token) {
-      navigate('/');
-      return;
-    }
-
     try {
+      const userData = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+
+      console.log('Checking auth state for save:', {
+        hasUserData: !!userData,
+        hasToken: !!token
+      });
+
+      if (!userData || !token) {
+        console.log('No auth data found, redirecting to login');
+        navigate('/');
+        return;
+      }
+
+      let user;
+      try {
+        user = JSON.parse(userData);
+        console.log('Parsed user data:', {
+          hasId: !!user._id,
+          email: user.email
+        });
+      } catch (e) {
+        console.error('Failed to parse user data:', e);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        navigate('/');
+        return;
+      }
+
+      if (!user._id) {
+        console.error('Invalid user data:', user);
+        navigate('/');
+        return;
+      }
+
+      console.log('Saving article:', {
+        userId: user._id,
+        articleTitle: article.title
+      });
+
       const response = await api.post('/auth/saveArticle', 
         {
           userId: user._id,
@@ -204,19 +321,42 @@ const NewsPage = () => {
           }
         },
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
         }
       );
 
+      console.log('Save article response:', {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data
+      });
+
       if (response.data?.savedArticle) {
+        console.log('Article saved successfully');
         setState(prev => ({
           ...prev,
           savedArticles: [...prev.savedArticles, response.data.savedArticle]
         }));
+      } else {
+        console.warn('Invalid save article response:', response.data);
       }
     } catch (error) {
-      console.error("Error saving article:", error);
+      console.error('Error saving article:', {
+        name: error.name,
+        message: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        } : null
+      });
+
       if (error.response?.status === 401) {
+        console.log('Authentication failed, clearing credentials');
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         navigate('/');
@@ -225,16 +365,26 @@ const NewsPage = () => {
   };
 
   const handleRemoveArticle = async (article) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    const token = localStorage.getItem('token');
-
-    if (!user?._id || !token) {
-      navigate('/');
-      return;
-    }
-
     try {
-      await api.post('/auth/removeArticle',
+      const userData = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+
+      if (!userData || !token) {
+        console.log('No user data or token found');
+        navigate('/');
+        return;
+      }
+
+      const user = JSON.parse(userData);
+      
+      if (!user._id) {
+        console.log('Invalid user data:', user);
+        navigate('/');
+        return;
+      }
+
+      console.log('Removing article for user:', user._id);
+      const response = await api.post('/auth/removeArticle',
         {
           userId: user._id,
           articleUrl: article.url
@@ -243,6 +393,8 @@ const NewsPage = () => {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
+
+      console.log('Remove article response:', response.data);
 
       setState(prev => ({
         ...prev,

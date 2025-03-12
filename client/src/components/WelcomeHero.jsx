@@ -39,13 +39,12 @@ const WelcomeHero = () => {
 
     const formData = {
       email: e.target.email.value.trim(),
-      password: e.target.password.value.trim(),
-      ...(isSignup && { username: e.target.username.value.trim() })
+      password: e.target.password.value.trim()
     };
 
     try {
       // Validate input
-      if (!formData.email || !formData.password || (isSignup && !formData.username)) {
+      if (!formData.email || !formData.password) {
         throw new Error('Please fill in all required fields');
       }
 
@@ -55,28 +54,88 @@ const WelcomeHero = () => {
 
       const endpoint = isSignup ? '/auth/register' : '/auth/login';
       
-      console.log('Sending auth request to:', api.defaults.baseURL + endpoint);
+      console.log('Auth Request:', {
+        url: api.defaults.baseURL + endpoint,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        data: { email: formData.email, password: '[REDACTED]' }
+      });
       
       const response = await api.post(endpoint, formData);
-      console.log('Auth response:', response.data);
+      console.log('Auth Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers,
+        data: {
+          ...response.data,
+          user: response.data?.user ? {
+            _id: response.data.user._id,
+            email: response.data.user.email
+          } : null,
+          token: response.data?.token ? '[PRESENT]' : '[MISSING]'
+        }
+      });
 
+      // Check if response has the expected format
       if (!response.data) {
-        throw new Error('No response received from server');
-      }
-
-      if (!response.data.user || !response.data.token) {
+        console.error('Empty response data');
         throw new Error('Invalid response format from server');
       }
 
-      // Store user data and token
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      localStorage.setItem('token', response.data.token);
+      // For registration
+      if (isSignup) {
+        if (!response.data.user?._id || !response.data.token) {
+          console.error('Invalid registration response format:', {
+            hasUser: !!response.data.user,
+            hasUserId: !!response.data.user?._id,
+            hasToken: !!response.data.token
+          });
+          throw new Error('Registration failed: Invalid response format');
+        }
+        console.log('Registration successful, storing user data');
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('token', response.data.token);
+      } else {
+        // For login
+        if (!response.data?.user?._id || !response.data?.token) {
+          console.error('Invalid login response format:', {
+            hasUser: !!response.data.user,
+            hasUserId: !!response.data.user?._id,
+            hasToken: !!response.data.token
+          });
+          throw new Error('Login failed: Invalid credentials or server error');
+        }
+        console.log('Login successful, storing user data');
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('token', response.data.token);
+      }
+
+      // Verify stored data
+      const storedUser = localStorage.getItem('user');
+      const storedToken = localStorage.getItem('token');
+      console.log('Stored data verification:', {
+        hasStoredUser: !!storedUser,
+        hasStoredToken: !!storedToken,
+        parsedUser: storedUser ? JSON.parse(storedUser) : null
+      });
       
       // Close modal and navigate to news
       setIsModalOpen(false);
       navigate('/news');
     } catch (error) {
-      console.error('Auth error:', error);
+      console.error('Auth error:', {
+        name: error.name,
+        message: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        } : null,
+        request: error.request ? '[REQUEST_OBJECT_PRESENT]' : null
+      });
       
       let errorMessage = 'An error occurred. Please try again.';
       
@@ -84,14 +143,24 @@ const WelcomeHero = () => {
         // The request was made and the server responded with a status code
         // that falls out of the range of 2xx
         errorMessage = error.response.data?.error || 
-                      `Server error: ${error.response.status}`;
-        console.error('Server response:', error.response.data);
+                      error.response.data?.message ||
+                      `Server error: ${error.response.status} - ${error.response.statusText}`;
+        console.error('Server error details:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data
+        });
       } else if (error.request) {
         // The request was made but no response was received
-        errorMessage = 'No response from server. Please try again.';
+        errorMessage = 'No response from server. Please check your internet connection and try again.';
+        console.error('Network error details:', {
+          request: '[REQUEST_OBJECT_PRESENT]',
+          message: error.message
+        });
       } else {
         // Something happened in setting up the request that triggered an Error
         errorMessage = error.message || 'Failed to process request';
+        console.error('Request setup error:', error.message);
       }
       
       setError(errorMessage);
@@ -156,22 +225,6 @@ const WelcomeHero = () => {
             )}
 
             <form onSubmit={handleAuth}>
-              {isSignup && (
-                <div className="mb-4">
-                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-                    Username
-                  </label>
-                  <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-                    placeholder="Choose a username"
-                  />
-                </div>
-              )}
-
               <div className="mb-4">
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                   Email
