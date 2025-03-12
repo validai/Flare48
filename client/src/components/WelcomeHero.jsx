@@ -61,7 +61,10 @@ const WelcomeHero = () => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        data: { email: formData.email, password: '[REDACTED]' }
+        data: { 
+          email: formData.email,
+          password: '[REDACTED]'
+        }
       });
       
       const response = await api.post(endpoint, formData);

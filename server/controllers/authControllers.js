@@ -7,21 +7,19 @@ export const register = async (req, res) => {
   try {
     console.log("📝 Registration attempt:", {
       email: req.body.email ? "provided" : "missing",
-      username: req.body.username ? "provided" : "missing",
       password: req.body.password ? "provided" : "missing"
     });
 
-    const { email, password, username } = req.body;
+    const { email, password } = req.body;
 
     // Validate required fields
-    if (!email || !password || !username) {
+    if (!email || !password) {
       console.log("❌ Missing required fields");
       return res.status(400).json({ 
         error: "Missing required fields",
         details: {
           email: !email ? "Email is required" : null,
-          password: !password ? "Password is required" : null,
-          username: !username ? "Username is required" : null
+          password: !password ? "Password is required" : null
         }
       });
     }
@@ -33,20 +31,16 @@ export const register = async (req, res) => {
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
-    });
+    const existingUser = await User.findOne({ email });
 
     if (existingUser) {
       console.log("❌ User already exists:", {
-        email: existingUser.email === email,
-        username: existingUser.username === username
+        email: existingUser.email === email
       });
       return res.status(400).json({ 
         error: "User already exists",
         details: {
-          email: existingUser.email === email ? "Email already in use" : null,
-          username: existingUser.username === username ? "Username already taken" : null
+          email: existingUser.email === email ? "Email already in use" : null
         }
       });
     }
@@ -57,13 +51,12 @@ export const register = async (req, res) => {
     // Create new user
     const user = new User({
       email,
-      username,
       password: hashedPassword
     });
 
     // Save user to database
     await user.save();
-    console.log("✅ User registered successfully:", { email, username });
+    console.log("✅ User registered successfully:", { email });
 
     // Generate JWT token
     const token = jwt.sign(
@@ -76,9 +69,8 @@ export const register = async (req, res) => {
     res.status(201).json({
       message: "User registered successfully",
       user: {
-        id: user._id,
-        email: user.email,
-        username: user.username
+        _id: user._id,
+        email: user.email
       },
       token
     });
@@ -127,10 +119,10 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: "Both email/username and password are required" });
+      return res.status(400).json({ error: "Both email and password are required" });
     }
 
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ email });
 
     if (!user) return res.status(400).json({ error: "Invalid credentials (user not found)" });
 
@@ -138,12 +130,18 @@ export const login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ error: "Invalid credentials (wrong password)" });
 
     const token = jwt.sign(
-      { _id: user._id, username: user.username },
+      { _id: user._id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "48h" }
     );
 
-    res.json({ token, userId: user._id, username: user.username });
+    res.json({ 
+      token, 
+      user: {
+        _id: user._id,
+        email: user.email
+      }
+    });
   } catch (error) {
     console.error("Login Error:", error);
     res.status(500).json({ error: "Server error during login", details: error.message });
@@ -153,7 +151,13 @@ export const login = async (req, res) => {
 // Protected Route Controller
 export const protectedRoute = (req, res) => {
   try {
-    res.json({ message: "You have accessed a protected route", username: req.user.username });
+    res.json({ 
+      message: "You have accessed a protected route",
+      user: {
+        _id: req.user._id,
+        email: req.user.email
+      }
+    });
   } catch (error) {
     console.error("Protected Route Error:", error);
     res.status(500).json({ error: "Failed to access protected route", details: error.message });

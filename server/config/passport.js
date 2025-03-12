@@ -35,7 +35,6 @@ passport.use(
           user = await User.create({
             googleId: profile.id,
             email: profile.emails[0].value,
-            username: profile.displayName,
             profilePicture: profile.photos[0].value
           });
         }
@@ -84,7 +83,6 @@ router.get(
         const token = req.user.token;
         const userData = {
             _id: req.user.user._id,
-            username: req.user.user.username,
             email: req.user.user.email
         };
         

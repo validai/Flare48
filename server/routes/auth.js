@@ -78,7 +78,6 @@ router.get(
       const redirectURL = new URL("/news", "https://flare48.onrender.com");
       redirectURL.searchParams.append("token", token);
       redirectURL.searchParams.append("userId", user._id);
-      redirectURL.searchParams.append("username", user.username);
       redirectURL.searchParams.append("email", user.email);
 
       console.log("Redirecting to:", redirectURL.toString());
