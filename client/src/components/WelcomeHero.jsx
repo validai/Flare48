@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
+
+const api = axios.create({
+  baseURL: 'https://flare48-j45i.onrender.com',
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  }
+});
 
 const WelcomeHero = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSignup, setIsSignup] = useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const images = [
@@ -17,6 +31,38 @@ const WelcomeHero = () => {
     }, 5000);
     return () => clearInterval(intervalId);
   }, []);
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
+
+    const formData = {
+      email: e.target.email.value.trim(),
+      password: e.target.password.value.trim(),
+      ...(isSignup && { username: e.target.username.value.trim() })
+    };
+
+    try {
+      const endpoint = isSignup ? '/auth/register' : '/auth/login';
+      const response = await api.post(endpoint, formData);
+
+      if (response.data) {
+        // Store user data and token
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        localStorage.setItem('token', response.data.token);
+        
+        // Close modal and navigate to news
+        setIsModalOpen(false);
+        navigate('/news');
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setError(error.response?.data?.error || 'An error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <section className="relative h-screen flex items-center justify-center overflow-hidden">
@@ -37,13 +83,119 @@ const WelcomeHero = () => {
           Your source for the latest news and updates from around the world.
           Get real-time coverage of breaking stories.
         </p>
-        <button
-          onClick={() => navigate("/news")}
-          className="px-8 py-3 bg-white text-black rounded-lg text-lg font-semibold hover:bg-neutral-200 transition"
-        >
-          Browse News
-        </button>
+        <div className="flex gap-4 justify-center">
+          <button
+            onClick={() => {
+              setIsSignup(true);
+              setIsModalOpen(true);
+            }}
+            className="px-8 py-3 bg-white text-black rounded-lg text-lg font-semibold hover:bg-neutral-200 transition"
+          >
+            Get Started
+          </button>
+          <button
+            onClick={() => {
+              setIsSignup(false);
+              setIsModalOpen(true);
+            }}
+            className="px-8 py-3 bg-transparent border-2 border-white text-white rounded-lg text-lg font-semibold hover:bg-white/10 transition"
+          >
+            Login
+          </button>
+        </div>
       </div>
+
+      {/* Auth Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-black mb-6">
+              {isSignup ? 'Create Account' : 'Welcome Back'}
+            </h2>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleAuth}>
+              {isSignup && (
+                <div className="mb-4">
+                  <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    placeholder="Choose a username"
+                  />
+                </div>
+              )}
+
+              <div className="mb-4">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  placeholder="Enter your email"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  id="password"
+                  name="password"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className={`flex-1 py-2 bg-black text-white rounded-md hover:bg-gray-800 transition ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  {isLoading ? 'Please wait...' : (isSignup ? 'Sign Up' : 'Login')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div className="mt-4 text-center text-sm text-gray-600">
+                <button
+                  type="button"
+                  onClick={() => setIsSignup(!isSignup)}
+                  className="text-black hover:underline"
+                >
+                  {isSignup ? 'Already have an account? Login' : "Don't have an account? Sign up"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
