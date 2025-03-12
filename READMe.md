@@ -90,9 +90,9 @@ Render will automatically detect changes and redeploy the services
 This project is MIT Licensed. Feel free to modify and use it as needed!
 🎯 Future Improvements
 
-	•	✅ Add user profile pages
-	•	✅ Implement dark mode
-	•	✅ Improve article categorization
+	•	✅  Add user profile pages
+	•	✅  Implement dark mode
+	•	✅  Improve article categorization
 👨‍💻 Contributors
 
 Developed by:
