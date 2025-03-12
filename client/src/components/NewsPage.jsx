@@ -27,10 +27,11 @@ const NewsPage = () => {
   const fetchArticles = useCallback(async () => {
     // Array of API keys to try in sequence
     const apiKeys = [
-      "227e827efba517c4a1b449b10d7bc2dd",
-      "01008499182045707c100247f657ba5c",
-      "b9e4c1c1b9b94b0d9d3f1f6c2f9e8d7" // Additional backup key
+      import.meta.env.VITE_NEWS_API_KEY_1 || "default_key_1",
+      import.meta.env.VITE_NEWS_API_KEY_2 || "default_key_2",
+      import.meta.env.VITE_NEWS_API_KEY_3 || "default_key_3" 
     ];
+    
 
     let lastError = null;
     let attempts = 0;
