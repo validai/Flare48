@@ -56,15 +56,28 @@ const NewsPage = () => {
     articles: [],
     savedArticles: [],
     isLoading: true,
-    error: null
+    error: null,
+    isUserLoaded: false
   });
   const navigate = useNavigate();
   
   // Get user data with strict validation
   const { user, token } = getUserData();
   
+  // First useEffect to handle user authentication
+  useEffect(() => {
+    if (!user?._id || !token) {
+      navigate("/");
+      return;
+    }
+    // If we have valid user data, mark it as loaded
+    setState(prev => ({ ...prev, isUserLoaded: true }));
+  }, [user, token, navigate]);
+
   // Add the fetchArticles function
   const fetchArticles = useCallback(async () => {
+    if (!user?._id || !token) return; // Don't fetch if no user
+
     try {
       const apiKey = "01008499182045707c100247f657ba5c";
       const currentDate = new Date();
@@ -76,7 +89,6 @@ const NewsPage = () => {
       );
 
       if (response?.data?.articles) {
-        // Cache the articles
         localStorage.setItem('cachedArticles', JSON.stringify({
           articles: response.data.articles,
           timestamp: Date.now()
@@ -91,7 +103,6 @@ const NewsPage = () => {
     } catch (error) {
       console.error("Error fetching articles:", error);
       
-      // Try to use cached articles as fallback
       const cachedData = localStorage.getItem('cachedArticles');
       if (cachedData) {
         try {
@@ -116,29 +127,17 @@ const NewsPage = () => {
         }));
       }
     }
-  }, []);
-  
-  // Immediately redirect if no valid user data
-  useEffect(() => {
-    if (!user?._id || !token) {
-      navigate("/");
-    }
-  }, [user, token, navigate]);
+  }, [user, token]); // Add dependencies
 
   const fetchSavedArticles = useCallback(async () => {
-    // Double check user data before making request
-    const { user: currentUser, token: currentToken } = getUserData();
-    if (!currentUser?._id || !currentToken) {
-      navigate("/");
-      return;
-    }
+    if (!user?._id || !token) return; // Don't fetch if no user
 
     try {
       const response = await api.get(
-        `/auth/saved-articles/${currentUser._id}`,
+        `/auth/saved-articles/${user._id}`, // Use the current user directly
         {
           headers: { 
-            'Authorization': `Bearer ${currentToken}`,
+            'Authorization': `Bearer ${token}`,
             'Cache-Control': 'no-cache'
           },
           timeout: 5000
@@ -155,13 +154,11 @@ const NewsPage = () => {
         navigate("/");
       }
     }
-  }, [navigate]);
+  }, [user, token, navigate]); // Add dependencies
 
+  // Second useEffect to handle data fetching after user is loaded
   useEffect(() => {
-    if (!user || !token) {
-      navigate("/");
-      return;
-    }
+    if (!state.isUserLoaded) return; // Don't proceed if user isn't loaded
 
     // Load cached articles immediately if available
     const cachedData = localStorage.getItem('cachedArticles');
@@ -189,7 +186,7 @@ const NewsPage = () => {
       clearInterval(articlesInterval);
       clearInterval(savedArticlesInterval);
     };
-  }, [user, token, navigate, fetchArticles, fetchSavedArticles]);
+  }, [state.isUserLoaded, fetchArticles, fetchSavedArticles]); // Only run when user is loaded
 
   const handleSaveArticle = async (article) => {
     if (!user?._id || !token) {
