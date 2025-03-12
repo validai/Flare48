@@ -27,11 +27,9 @@ passport.use(
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        // Check if user already exists
         let user = await User.findOne({ googleId: profile.id });
 
         if (!user) {
-          // Create new user if they don't exist
           user = await User.create({
             googleId: profile.id,
             email: profile.emails[0].value,
@@ -39,14 +37,12 @@ passport.use(
           });
         }
 
-        // Generate JWT token
         const token = jwt.sign(
           { userId: user._id, email: user.email },
           process.env.JWT_SECRET,
           { expiresIn: '24h' }
         );
 
-        // Return both user and token
         return done(null, { user, token });
       } catch (error) {
         return done(error, null);
@@ -55,12 +51,10 @@ passport.use(
   )
 );
 
-// Serialize user for the session
 passport.serializeUser((user, done) => {
   done(null, user);
 });
 
-// Deserialize user from the session
 passport.deserializeUser((user, done) => {
   done(null, user);
 });
@@ -76,17 +70,14 @@ router.get(
         }
         console.log("Google Authentication Success:", req.user);
 
-        // Get the base client URL
         const baseClientUrl = process.env.CLIENT_URL || "http://localhost:5173";
-        
-        // Include token and user data in the redirect URL
+
         const token = req.user.token;
         const userData = {
             _id: req.user.user._id,
             email: req.user.user.email
         };
-        
-        // Create the redirect URL with token and encoded user data
+
         const redirectURL = `${baseClientUrl}/news?token=${token}&userData=${encodeURIComponent(JSON.stringify(userData))}`;
         
         console.log("Redirecting to:", redirectURL);
