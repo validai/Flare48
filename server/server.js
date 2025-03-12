@@ -63,8 +63,10 @@ const timeout = (req, res, next) => {
 app.use(timeout);
 
 // CORS configuration
+const clientUrl = process.env.CLIENT_URL 
+
 app.use(cors({
-  origin: ["https://flare48.onrender.com", "http://localhost:5173"],
+  origin: [clientUrl],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],

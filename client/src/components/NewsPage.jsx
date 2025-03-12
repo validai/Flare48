@@ -5,7 +5,7 @@ import axios from "axios";
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: 'https://flare48-j45i.onrender.com',
+  baseURL: import.meta.env.VITE_BACKEND_URL || "http://localhost:3000",
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

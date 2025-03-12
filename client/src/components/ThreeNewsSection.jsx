@@ -32,7 +32,7 @@ const ThreeNewsSection = () => {
           }
         }
 
-        const apiKey = "01008499182045707c100247f657ba5c";
+        const apiKey = import.meta.env.VITE_GNEWS_API_KEY;
         const currentDate = new Date();
         const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
         const formattedDate = pastDate.toISOString();

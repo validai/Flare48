@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/news", async (req, res) => {
   try {
     const response = await axios.get(
-      `https://newsdata.io/api/1/latest?apikey=${process.env.NEWS_API_KEY}&language=en`
+      `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${apiKey}`
     );
     res.json(response.data);
   } catch (error) {

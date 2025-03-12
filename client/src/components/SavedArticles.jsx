@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: 'https://flare48-j45i.onrender.com',
+  baseURL: import.meta.env.VITE_BACKEND_URL || "http://localhost:3000",
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
