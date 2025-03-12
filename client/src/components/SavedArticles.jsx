@@ -110,7 +110,7 @@ const SavedArticles = () => {
     }
   }, [user, token, navigate]);
 
-  // Fetch saved articles on component mount and when user/token changes
+  // Fetch saved articles only on component mount and when user/token changes
   useEffect(() => {
     if (!user?._id || !token) {
       navigate("/");
@@ -118,6 +118,8 @@ const SavedArticles = () => {
     }
 
     fetchSavedArticles();
+
+    // No intervals or continuous polling
   }, [user, token, navigate, fetchSavedArticles]);
 
   const normalizeUrl = (url) => {
