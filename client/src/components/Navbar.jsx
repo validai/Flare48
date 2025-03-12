@@ -10,7 +10,7 @@ const Navbar = () => {
             <div className="container px-6 mx-auto relative text-sm">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2 cursor-pointer" onClick={() => navigate('/')}>
-                        <span className="text-4xl font-bold tracking-tight">Flare48.06</span>
+                        <span className="text-4xl font-bold tracking-tight">Flare48</span>
                     </div>
 
                     <div className="flex items-center space-x-8">
