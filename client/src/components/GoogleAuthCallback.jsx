@@ -1,9 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const GoogleAuthCallback = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -12,27 +13,59 @@ const GoogleAuthCallback = () => {
     const username = params.get('username');
     const email = params.get('email');
 
-    console.log("Received auth data:", { token, userId, username, email });
+    // Validate required fields
+    if (!token || !userId || !username || !email) {
+      console.error('Missing required authentication data');
+      navigate('/?error=missing_data');
+      return;
+    }
 
-    if (token && userId && username) {
-      // Store user data in sessionStorage with _id to match the structure
-      sessionStorage.setItem('token', token);
-      sessionStorage.setItem('user', JSON.stringify({
-        _id: userId,  // Store userId as _id to match the structure
+    // Validate data types
+    if (typeof token !== 'string' || !token.trim() ||
+        typeof userId !== 'string' || !userId.trim() ||
+        typeof username !== 'string' || !username.trim() ||
+        typeof email !== 'string' || !email.trim()) {
+      console.error('Invalid authentication data format');
+      navigate('/?error=invalid_format');
+      return;
+    }
+
+    try {
+      // Create user object with validated data
+      const userData = {
+        _id: userId,
         username: username,
         email: email
-      }));
+      };
 
-      console.log("Stored auth data in session");
-      
+      // Store validated data
+      sessionStorage.setItem('token', token);
+      sessionStorage.setItem('user', JSON.stringify(userData));
+
       // Redirect to news page
       navigate('/news');
-    } else {
-      // Handle error case
-      console.error('Missing authentication data:', { token, userId, username });
-      navigate('/?error=auth_failed');
+    } catch (error) {
+      console.error('Failed to store authentication data:', error);
+      navigate('/?error=storage_failed');
     }
   }, [navigate, location]);
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4 text-red-600">Authentication Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+          >
+            Return to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center min-h-screen">

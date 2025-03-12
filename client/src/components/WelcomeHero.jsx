@@ -49,8 +49,6 @@ const WelcomeHero = () => {
     
     try {
       const endpoint = isSignup ? REGISTER_URL : LOGIN_URL;
-      console.log("Sending request to:", endpoint);
-      console.log("Request data:", formData);
       
       const response = await fetch(endpoint, {
         method: "POST",
@@ -64,32 +62,63 @@ const WelcomeHero = () => {
       let data;
       try {
         data = await response.json();
-        console.log("Server response:", data);
       } catch (err) {
-        console.error("Error parsing response:", err);
         setError("Server response was not in the expected format");
         setIsLoading(false);
         return;
       }
     
-      if (response.ok) {
-        console.log("Success:", data);
-  
-        sessionStorage.setItem("user", JSON.stringify({ 
+      if (response.ok && data) {
+        // Validate required fields
+        if (!data.userId || !data.token) {
+          setError("Invalid response from server: missing required fields");
+          setIsLoading(false);
+          return;
+        }
+
+        // Create user object with strict validation
+        const userData = {
           _id: data.userId,
-          username: data.username || formData.username, 
-          email: formData.email 
-        }));
-        sessionStorage.setItem("token", data.token);
-  
-        navigate("/news");
+          username: data.username || formData.username,
+          email: formData.email
+        };
+
+        // Validate user object
+        if (!userData._id || typeof userData._id !== 'string' || 
+            !userData.email || typeof userData.email !== 'string') {
+          setError("Invalid user data received from server");
+          setIsLoading(false);
+          return;
+        }
+
+        // Validate token
+        if (typeof data.token !== 'string' || !data.token.trim()) {
+          setError("Invalid authentication token received");
+          setIsLoading(false);
+          return;
+        }
+
+        try {
+          // Store validated data
+          sessionStorage.setItem("user", JSON.stringify(userData));
+          sessionStorage.setItem("token", data.token);
+          navigate("/news");
+        } catch (storageError) {
+          setError("Failed to save authentication data. Please try again.");
+          setIsLoading(false);
+          return;
+        }
       } else {
-        console.error("Request failed:", data);
-        setError(data?.error || data?.message || `Failed to ${isSignup ? 'sign up' : 'log in'}. Please try again.`);
+        const errorMessage = data?.error || data?.message || 
+          `Failed to ${isSignup ? 'sign up' : 'log in'}. Please try again.`;
+        setError(errorMessage);
       }
     } catch (error) {
-      console.error("Network error:", error);
-      setError("Unable to connect to the server. Please try again later.");
+      if (!navigator.onLine) {
+        setError("No internet connection. Please check your network and try again.");
+      } else {
+        setError("Unable to connect to the server. Please try again later.");
+      }
     } finally {
       setIsLoading(false);
     }
