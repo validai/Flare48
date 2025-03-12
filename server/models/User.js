@@ -29,7 +29,7 @@ const UserSchema = new mongoose.Schema(
     savedArticles: [
       {
         title: { type: String, required: true },
-        url: { type: String, required: true, unique: true, sparse: true },
+        url: { type: String, required: true, sparse: true },
         image: { type: String, default: null },
         publishedAt: { type: Date, default: Date.now },
         savedAt: { type: Date, default: Date.now }
