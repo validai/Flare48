@@ -44,10 +44,19 @@ const WelcomeHero = () => {
     };
 
     try {
+      // Validate input
+      if (!formData.email || !formData.password || (isSignup && !formData.username)) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      if (formData.password.length < 6) {
+        throw new Error('Password must be at least 6 characters long');
+      }
+
       const endpoint = isSignup ? '/auth/register' : '/auth/login';
       const response = await api.post(endpoint, formData);
 
-      if (response.data) {
+      if (response.data?.user && response.data?.token) {
         // Store user data and token
         localStorage.setItem('user', JSON.stringify(response.data.user));
         localStorage.setItem('token', response.data.token);
@@ -55,10 +64,16 @@ const WelcomeHero = () => {
         // Close modal and navigate to news
         setIsModalOpen(false);
         navigate('/news');
+      } else {
+        throw new Error('Invalid response from server');
       }
     } catch (error) {
       console.error('Auth error:', error);
-      setError(error.response?.data?.error || 'An error occurred. Please try again.');
+      setError(
+        error.response?.data?.error || 
+        error.message || 
+        'An error occurred. Please try again.'
+      );
     } finally {
       setIsLoading(false);
     }

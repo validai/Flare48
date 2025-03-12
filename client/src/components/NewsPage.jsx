@@ -44,40 +44,38 @@ const NewsPage = () => {
         setState(prev => ({ 
           ...prev, 
           articles: response.data.articles,
-          isLoadingArticles: false 
+          isLoadingArticles: false,
+          error: null
         }));
       }
     } catch (error) {
       console.error("Error fetching articles:", error);
       
-      const cachedData = localStorage.getItem('cachedArticles');
-      if (cachedData) {
-        try {
-          const { articles: cachedArticles } = JSON.parse(cachedData);
-          setState(prev => ({ 
-            ...prev, 
-            articles: cachedArticles,
-            isLoadingArticles: false 
-          }));
-        } catch (e) {
-          setState(prev => ({ 
-            ...prev, 
-            error: "Failed to load articles. Please try again later.",
-            isLoadingArticles: false 
-          }));
+      // Try to load from cache first
+      let cachedArticles = [];
+      try {
+        const cachedData = localStorage.getItem('cachedArticles');
+        if (cachedData) {
+          const parsed = JSON.parse(cachedData);
+          if (parsed && Array.isArray(parsed.articles)) {
+            cachedArticles = parsed.articles;
+          }
         }
-      } else {
-        setState(prev => ({ 
-          ...prev, 
-          error: "Failed to load articles. Please try again later.",
-          isLoadingArticles: false 
-        }));
+      } catch (e) {
+        console.error("Error parsing cached articles:", e);
       }
+
+      setState(prev => ({ 
+        ...prev, 
+        articles: cachedArticles,
+        isLoadingArticles: false,
+        error: cachedArticles.length ? null : "Failed to load articles. Please try again later."
+      }));
     }
   }, []);
 
   const fetchSavedArticles = useCallback(async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
     const token = localStorage.getItem('token');
 
     if (!user?._id || !token) {
@@ -100,12 +98,15 @@ const NewsPage = () => {
     } catch (error) {
       console.error("Error fetching saved articles:", error);
       if (error.response?.status === 401) {
-        // Handle unauthorized - clear auth data
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         navigate('/');
       }
-      setState(prev => ({ ...prev, isLoadingSaved: false }));
+      setState(prev => ({ 
+        ...prev, 
+        isLoadingSaved: false,
+        savedArticles: []
+      }));
     }
   }, [navigate]);
 
@@ -115,22 +116,30 @@ const NewsPage = () => {
 
     const fetchData = async () => {
       try {
+        let shouldFetchNew = true;
+        
         // Check cache first
-        const cachedData = localStorage.getItem('cachedArticles');
-        if (cachedData) {
-          const { articles: cachedArticles, timestamp } = JSON.parse(cachedData);
-          const cacheAge = Date.now() - timestamp;
-          // Use cache if it's less than 15 minutes old
-          if (cacheAge < 15 * 60 * 1000 && isMounted) {
-            setState(prev => ({ 
-              ...prev, 
-              articles: cachedArticles,
-              isLoadingArticles: false 
-            }));
-          } else {
-            await fetchArticles();
+        try {
+          const cachedData = localStorage.getItem('cachedArticles');
+          if (cachedData) {
+            const { articles: cachedArticles, timestamp } = JSON.parse(cachedData);
+            const cacheAge = Date.now() - timestamp;
+            // Use cache if it's less than 15 minutes old
+            if (cacheAge < 15 * 60 * 1000 && isMounted && Array.isArray(cachedArticles)) {
+              setState(prev => ({ 
+                ...prev, 
+                articles: cachedArticles,
+                isLoadingArticles: false,
+                error: null
+              }));
+              shouldFetchNew = false;
+            }
           }
-        } else {
+        } catch (e) {
+          console.error("Error reading cache:", e);
+        }
+
+        if (shouldFetchNew) {
           await fetchArticles();
         }
 
