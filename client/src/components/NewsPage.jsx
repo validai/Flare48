@@ -63,6 +63,61 @@ const NewsPage = () => {
   // Get user data with strict validation
   const { user, token } = getUserData();
   
+  // Add the fetchArticles function
+  const fetchArticles = useCallback(async () => {
+    try {
+      const apiKey = "01008499182045707c100247f657ba5c";
+      const currentDate = new Date();
+      const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
+      const formattedDate = pastDate.toISOString();
+
+      const response = await axios.get(
+        `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`
+      );
+
+      if (response?.data?.articles) {
+        // Cache the articles
+        localStorage.setItem('cachedArticles', JSON.stringify({
+          articles: response.data.articles,
+          timestamp: Date.now()
+        }));
+
+        setState(prev => ({ 
+          ...prev, 
+          articles: response.data.articles,
+          isLoading: false 
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching articles:", error);
+      
+      // Try to use cached articles as fallback
+      const cachedData = localStorage.getItem('cachedArticles');
+      if (cachedData) {
+        try {
+          const { articles: cachedArticles } = JSON.parse(cachedData);
+          setState(prev => ({ 
+            ...prev, 
+            articles: cachedArticles,
+            isLoading: false 
+          }));
+        } catch (e) {
+          setState(prev => ({ 
+            ...prev, 
+            error: "Failed to load articles. Please try again later.",
+            isLoading: false 
+          }));
+        }
+      } else {
+        setState(prev => ({ 
+          ...prev, 
+          error: "Failed to load articles. Please try again later.",
+          isLoading: false 
+        }));
+      }
+    }
+  }, []);
+  
   // Immediately redirect if no valid user data
   useEffect(() => {
     if (!user?._id || !token) {
