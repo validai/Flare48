@@ -99,13 +99,10 @@ const WelcomeHero = () => {
   const handleGoogleAuth = () => {
     console.log("Google OAuth button clicked");
     const backendUrl = "https://flare48-j45i.onrender.com";
-<<<<<<< Updated upstream
-    window.location.href = `${backendUrl}/auth/google`;
-=======
     const redirectUri = "https://flare48-j45i.onrender.com/auth/google/callback"; // Ensure this matches Google Cloud
     window.location.href = `${backendUrl}/auth/google?redirect_uri=${redirectUri}`;
->>>>>>> Stashed changes
   };
+  
   
 
   return (
