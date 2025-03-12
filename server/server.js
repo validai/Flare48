@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import mongoose from "mongoose";
 import session from "express-session";
+import MongoStore from "connect-mongo";
 import passport from "./config/passport.js";
 import apiRoutes from "./routes/api.js";
 import authRoutes from "./routes/auth.js";
@@ -78,18 +79,24 @@ app.options('*', cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// 🔹 Express Session Setup
+// 🔹 Express Session with MongoDB Setup
 app.use(
   session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET, // Secure session secret
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGO_URI, // MongoDB connection string
+      collectionName: "sessions", // Collection name for storing sessions
+      ttl: 14 * 24 * 60 * 60, // Session expires in 14 days
+      autoRemove: "native", // Automatically remove expired sessions
+    }),
     proxy: true,
     cookie: {
       secure: process.env.NODE_ENV === "production",
-      httpOnly: true,
-      sameSite: 'none',
-      maxAge: 24 * 60 * 60 * 1000
+      httpOnly: true, 
+      sameSite: "none", 
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours session expiry
     },
   })
 );
