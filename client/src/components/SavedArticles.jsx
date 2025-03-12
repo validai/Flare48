@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
@@ -19,6 +19,57 @@ const SavedArticles = () => {
     error: null
   });
   const navigate = useNavigate();
+
+  const handleRemoveArticle = async (article) => {
+    try {
+      const userData = localStorage.getItem('user');
+      const token = localStorage.getItem('token');
+
+      if (!userData || !token) {
+        console.log('No user data or token found');
+        navigate('/');
+        return;
+      }
+
+      const user = JSON.parse(userData);
+      
+      if (!user._id) {
+        console.log('Invalid user data:', user);
+        navigate('/');
+        return;
+      }
+
+      console.log('Removing article:', {
+        userId: user._id,
+        articleUrl: article.url
+      });
+
+      const response = await api.post('/auth/removeArticle',
+        {
+          userId: user._id,
+          articleUrl: article.url
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      console.log('Remove article response:', response.data);
+
+      // Update local state to remove the article
+      setState(prev => ({
+        ...prev,
+        savedArticles: prev.savedArticles.filter(saved => saved.url !== article.url)
+      }));
+    } catch (error) {
+      console.error("Error removing article:", error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        navigate('/');
+      }
+    }
+  };
 
   useEffect(() => {
     const fetchSavedArticles = async () => {
@@ -171,14 +222,23 @@ const SavedArticles = () => {
               <p className="mt-1 text-sm text-black dark:text-black">
                 Published: {new Date(article.publishedAt).toLocaleString()}
               </p>
-              <a
-                href={article.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 text-sm text-blue-600 hover:underline block"
-              >
-                Read Full Article
-              </a>
+              <div className="flex justify-between items-center mt-4">
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  Read Full Article
+                </a>
+                <button
+                  onClick={() => handleRemoveArticle(article)}
+                  className="p-2 text-red-500 hover:text-red-700 hover:scale-110 transition-all"
+                  title="Remove from saved articles"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </div>
             </div>
           ))
         ) : (
