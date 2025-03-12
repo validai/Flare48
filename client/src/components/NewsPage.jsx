@@ -137,10 +137,8 @@ const NewsPage = () => {
         `/auth/saved-articles/${user._id}`, // Use the current user directly
         {
           headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Cache-Control': 'no-cache'
-          },
-          timeout: 5000
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
 
@@ -195,6 +193,12 @@ const NewsPage = () => {
     }
 
     try {
+      console.log("Attempting to save article:", {
+        userId: user._id,
+        articleTitle: article.title,
+        articleUrl: article.url
+      });
+
       const response = await api.post(
         "/auth/saveArticle",
         {
@@ -208,12 +212,12 @@ const NewsPage = () => {
         },
         {
           headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Cache-Control': 'no-cache'
-          },
-          timeout: 5000
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
+      
+      console.log("Save article response:", response.data);
       
       if (response?.data?.savedArticle) {
         setState(prev => ({
@@ -222,12 +226,17 @@ const NewsPage = () => {
         }));
       }
     } catch (error) {
+      console.error("Error saving article:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
+      
       if (error.response?.status === 401 || error.response?.status === 403) {
         sessionStorage.removeItem("user");
         sessionStorage.removeItem("token");
         navigate("/");
       }
-      // Silently handle other errors to prevent UI disruption
     }
   };
 
