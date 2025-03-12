@@ -133,8 +133,9 @@ const NewsPage = () => {
     if (!user?._id || !token) return; // Don't fetch if no user
 
     try {
+      console.log("Fetching saved articles for user:", user._id);
       const response = await api.get(
-        `/auth/saved-articles/${user._id}`, // Use the current user directly
+        `/auth/saved-articles/${user._id}`,
         {
           headers: { 
             'Authorization': `Bearer ${token}`
@@ -143,7 +144,11 @@ const NewsPage = () => {
       );
 
       if (response?.data?.savedArticles) {
-        setState(prev => ({ ...prev, savedArticles: response.data.savedArticles }));
+        setState(prev => ({ 
+          ...prev, 
+          savedArticles: response.data.savedArticles,
+          isLoading: false 
+        }));
       }
     } catch (error) {
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -152,7 +157,7 @@ const NewsPage = () => {
         navigate("/");
       }
     }
-  }, [user, token, navigate]); // Add dependencies
+  }, [user, token, navigate]);
 
   // Second useEffect to handle data fetching after user is loaded
   useEffect(() => {
@@ -177,14 +182,14 @@ const NewsPage = () => {
 
     // Set up refresh intervals with longer periods
     const articlesInterval = setInterval(fetchArticles, 10 * 60 * 1000); // 10 minutes
-    const savedArticlesInterval = setInterval(fetchSavedArticles, 60 * 1000); // 1 minute
+    const savedArticlesInterval = setInterval(fetchSavedArticles, 30 * 1000); // 30 seconds
 
     return () => {
       clearTimeout(initialFetchTimeout);
       clearInterval(articlesInterval);
       clearInterval(savedArticlesInterval);
     };
-  }, [state.isUserLoaded, fetchArticles, fetchSavedArticles]); // Only run when user is loaded
+  }, [state.isUserLoaded, fetchArticles, fetchSavedArticles]);
 
   const handleSaveArticle = async (article) => {
     if (!user?._id || !token) {
@@ -243,7 +248,6 @@ const NewsPage = () => {
         message: error.message
       });
       
-      // Set error message in state
       setState(prev => ({
         ...prev,
         error: error.response?.data?.error || "Failed to save article. Please try again."
@@ -266,14 +270,17 @@ const NewsPage = () => {
           articleUrl: article.url
         },
         {
-          headers: { Authorization: `Bearer ${token}` },
-          timeout: 5000
+          headers: { 
+            'Authorization': `Bearer ${token}`
+          }
         }
       );
 
       setState(prev => ({
         ...prev,
-        savedArticles: prev.savedArticles.filter(savedArticle => savedArticle.url !== article.url)
+        savedArticles: prev.savedArticles.filter(
+          savedArticle => savedArticle.url !== article.url
+        )
       }));
     } catch (error) {
       if (error.response?.status === 401 || error.response?.status === 403) {
