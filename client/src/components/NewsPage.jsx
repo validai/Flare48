@@ -27,29 +27,29 @@ const NewsPage = () => {
   const fetchArticles = useCallback(async () => {
     try {
       const apiKey = "01008499182045707c100247f657ba5c";
-      const currentDate = new Date();
-      const pastDate = new Date(currentDate.getTime() - 48 * 60 * 60 * 1000);
-      const formattedDate = pastDate.toISOString();
-
       const response = await axios.get(
-        `https://gnews.io/api/v4/search?q=latest&from=${formattedDate}&sortby=publishedAt&token=${apiKey}&lang=en`
+        `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${apiKey}`
       );
 
       if (response?.data?.articles) {
+        const articles = response.data.articles.filter(article => 
+          article.image && article.title && article.url
+        );
+
         localStorage.setItem('cachedArticles', JSON.stringify({
-          articles: response.data.articles,
+          articles,
           timestamp: Date.now()
         }));
 
         setState(prev => ({ 
           ...prev, 
-          articles: response.data.articles,
+          articles,
           isLoadingArticles: false,
           error: null
         }));
       }
     } catch (error) {
-      console.error("Error fetching articles:", error);
+      console.error("Error fetching articles:", error?.response?.data || error);
       
       // Try to load from cache first
       let cachedArticles = [];
@@ -69,7 +69,7 @@ const NewsPage = () => {
         ...prev, 
         articles: cachedArticles,
         isLoadingArticles: false,
-        error: cachedArticles.length ? null : "Failed to load articles. Please try again later."
+        error: cachedArticles.length ? "Using cached articles. Please refresh later." : "Failed to load articles. Please try again later."
       }));
     }
   }, []);

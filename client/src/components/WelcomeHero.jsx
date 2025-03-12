@@ -54,26 +54,47 @@ const WelcomeHero = () => {
       }
 
       const endpoint = isSignup ? '/auth/register' : '/auth/login';
+      
+      console.log('Sending auth request to:', api.defaults.baseURL + endpoint);
+      
       const response = await api.post(endpoint, formData);
+      console.log('Auth response:', response.data);
 
-      if (response.data?.user && response.data?.token) {
-        // Store user data and token
-        localStorage.setItem('user', JSON.stringify(response.data.user));
-        localStorage.setItem('token', response.data.token);
-        
-        // Close modal and navigate to news
-        setIsModalOpen(false);
-        navigate('/news');
-      } else {
-        throw new Error('Invalid response from server');
+      if (!response.data) {
+        throw new Error('No response received from server');
       }
+
+      if (!response.data.user || !response.data.token) {
+        throw new Error('Invalid response format from server');
+      }
+
+      // Store user data and token
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      localStorage.setItem('token', response.data.token);
+      
+      // Close modal and navigate to news
+      setIsModalOpen(false);
+      navigate('/news');
     } catch (error) {
       console.error('Auth error:', error);
-      setError(
-        error.response?.data?.error || 
-        error.message || 
-        'An error occurred. Please try again.'
-      );
+      
+      let errorMessage = 'An error occurred. Please try again.';
+      
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        errorMessage = error.response.data?.error || 
+                      `Server error: ${error.response.status}`;
+        console.error('Server response:', error.response.data);
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = 'No response from server. Please try again.';
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        errorMessage = error.message || 'Failed to process request';
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
