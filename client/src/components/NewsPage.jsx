@@ -55,7 +55,8 @@ const NewsPage = () => {
   const [state, setState] = useState({
     articles: [],
     savedArticles: [],
-    isLoading: true,
+    isLoadingArticles: true,
+    isLoadingSaved: true,
     error: null,
     isUserLoaded: false
   });
@@ -97,7 +98,7 @@ const NewsPage = () => {
         setState(prev => ({ 
           ...prev, 
           articles: response.data.articles,
-          isLoading: false 
+          isLoadingArticles: false 
         }));
       }
     } catch (error) {
@@ -110,24 +111,24 @@ const NewsPage = () => {
           setState(prev => ({ 
             ...prev, 
             articles: cachedArticles,
-            isLoading: false 
+            isLoadingArticles: false 
           }));
         } catch (e) {
           setState(prev => ({ 
             ...prev, 
             error: "Failed to load articles. Please try again later.",
-            isLoading: false 
+            isLoadingArticles: false 
           }));
         }
       } else {
         setState(prev => ({ 
           ...prev, 
           error: "Failed to load articles. Please try again later.",
-          isLoading: false 
+          isLoadingArticles: false 
         }));
       }
     }
-  }, [user, token]); // Add dependencies
+  }, [user, token]);
 
   const fetchSavedArticles = useCallback(async (retryCount = 0) => {
     if (!user?._id || !token) return; // Don't fetch if no user
@@ -149,7 +150,7 @@ const NewsPage = () => {
         setState(prev => ({ 
           ...prev, 
           savedArticles: response.data.savedArticles,
-          isLoading: false,
+          isLoadingSaved: false,
           error: null
         }));
       } else {
@@ -157,7 +158,7 @@ const NewsPage = () => {
         setState(prev => ({
           ...prev,
           error: "Failed to fetch saved articles: Invalid response format",
-          isLoading: false
+          isLoadingSaved: false
         }));
       }
     } catch (error) {
@@ -182,7 +183,7 @@ const NewsPage = () => {
       setState(prev => ({
         ...prev,
         error: error.response?.data?.error || "Failed to fetch saved articles",
-        isLoading: false
+        isLoadingSaved: false
       }));
 
       if (error.response?.status === 401 || error.response?.status === 403) {
@@ -193,40 +194,50 @@ const NewsPage = () => {
     }
   }, [user, token, navigate]);
 
-  // Second useEffect to handle data fetching after user is loaded
+  // Load cached articles immediately if available
   useEffect(() => {
-    if (!state.isUserLoaded) return; // Don't proceed if user isn't loaded
-
-    // Load cached articles immediately if available
     const cachedData = localStorage.getItem('cachedArticles');
     if (cachedData) {
       try {
         const { articles: cachedArticles } = JSON.parse(cachedData);
-        setState(prev => ({ ...prev, articles: cachedArticles }));
+        setState(prev => ({ 
+          ...prev, 
+          articles: cachedArticles,
+          isLoadingArticles: false 
+        }));
       } catch (e) {
         localStorage.removeItem('cachedArticles');
       }
     }
+  }, []); // Only run once on mount
 
-    // Initial data fetch with delay
-    const fetchInitialData = async () => {
+  // Handle data fetching after user is loaded
+  useEffect(() => {
+    if (!state.isUserLoaded) return;
+
+    let isMounted = true;
+
+    const fetchData = async () => {
       try {
-        // Add a small delay before the first fetch
+        // Fetch saved articles first with a small delay
         await new Promise(resolve => setTimeout(resolve, 500));
-        await fetchSavedArticles();
-        await fetchArticles();
+        if (isMounted) {
+          await fetchSavedArticles();
+          await fetchArticles();
+        }
       } catch (error) {
-        console.error("Error during initial data fetch:", error);
+        console.error("Error during data fetch:", error);
       }
     };
 
-    fetchInitialData();
+    fetchData();
 
-    // Set up refresh intervals with longer periods
+    // Set up refresh intervals
     const articlesInterval = setInterval(fetchArticles, 10 * 60 * 1000); // 10 minutes
-    const savedArticlesInterval = setInterval(fetchSavedArticles, 60 * 1000); // Increased to 60 seconds
+    const savedArticlesInterval = setInterval(fetchSavedArticles, 60 * 1000); // 1 minute
 
     return () => {
+      isMounted = false;
       clearInterval(articlesInterval);
       clearInterval(savedArticlesInterval);
     };
@@ -402,9 +413,9 @@ const NewsPage = () => {
     );
   }
 
-  const { articles, savedArticles, isLoading, error } = state;
+  const { articles, savedArticles, isLoadingArticles, error } = state;
 
-  if (isLoading && articles.length === 0) {
+  if (isLoadingArticles && articles.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
