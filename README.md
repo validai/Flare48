@@ -39,7 +39,7 @@ License
 	◦	JWT Authentication - Secure user login
 	•	APIs Used
 	◦	Google News API - Fetching latest news
-	◦	Google Search API - Searching for articles
+	◦	Google Custom Search API - Searching for articles
 	◦	Rapid API - Additional news sources
 📂 Project Structure
 
@@ -85,6 +85,10 @@ Both frontend and backend are deployed on Render. The deployment is configured u
 Deploying Manually
 Push your changes to GitHub
 Render will automatically detect changes and redeploy the services
+
+ Frontend Link: https://flare48.onrender.com/
+ Backend Link: https://flare48-j45i.onrender.com 
+ 
 📜 License
 
 This project is MIT Licensed. Feel free to modify and use it as needed!
